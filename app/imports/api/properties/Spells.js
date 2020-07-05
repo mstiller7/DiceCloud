@@ -1,5 +1,6 @@
-import { ActionSchema } from '/imports/api/properties/Actions.js';
+import { ActionSchema, ComputedOnlyActionSchema } from '/imports/api/properties/Actions.js';
 import SimpleSchema from 'simpl-schema';
+import VARIABLE_NAME_REGEX from '/imports/constants/VARIABLE_NAME_REGEX.js';
 
 const magicSchools = [
 	'abjuration',
@@ -25,6 +26,10 @@ let SpellSchema = new SimpleSchema({})
 		type: Boolean,
 		optional: true,
 	},
+  prepared: {
+		type: Boolean,
+		optional: true,
+	},
   // This spell ignores spell slot rules
   castWithoutSpellSlots: {
     type: Boolean,
@@ -33,14 +38,6 @@ let SpellSchema = new SimpleSchema({})
   hasAttackRoll: {
     type: Boolean,
     optional: true,
-  },
-	// Spell lists that this spell appears on
-  spellLists: {
-    type: Array,
-    defaultValue: [],
-  },
-  'spellLists.$': {
-    type: String,
   },
 	description: {
 		type: String,
@@ -93,4 +90,11 @@ let SpellSchema = new SimpleSchema({})
 	},
 });
 
-export { SpellSchema };
+const ComputedOnlySpellSchema = new SimpleSchema()
+  .extend(ComputedOnlyActionSchema);
+
+const ComputedSpellSchema = new SimpleSchema()
+  .extend(SpellSchema)
+  .extend(ComputedOnlySpellSchema);
+
+export { SpellSchema, ComputedOnlySpellSchema, ComputedSpellSchema };

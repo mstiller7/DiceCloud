@@ -1,11 +1,19 @@
 <template lang="html">
   <div :class="attackForm ? 'attack-form' : 'action-form'">
+    <div class="layout column align-center">
+      <icon-picker
+        label="Icon"
+        :value="model.icon"
+        :error-messages="errors.icon"
+        @change="change('icon', ...arguments)"
+      />
+    </div>
     <text-field
+      ref="focusFirst"
       label="Name"
       :value="model.name"
-      :debounce-time="debounceTime"
       :error-messages="errors.name"
-      @change="(value, ack) => $emit('change', {path: ['name'], value, ack})"
+      @change="change('name', ...arguments)"
     />
     <smart-select
       label="Action type"
@@ -14,34 +22,30 @@
       :error-messages="errors.actionType"
       :menu-props="{auto: true, lazy: true}"
       :hint="actionTypeHints[model.actionType]"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['actionType'], value, ack})"
+      @change="change('actionType', ...arguments)"
     />
     <text-field
       v-if="attackForm"
       label="Roll bonus"
       :value="model.rollBonus"
       :error-messages="errors.rollBonus"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['rollBonus'], value, ack})"
+      @change="change('rollBonus', ...arguments)"
+    />
+    <text-area
+      label="Summary"
+      hint="This will appear in the action card in the character sheet"
+      :value="model.summary"
+      :error-messages="errors.summary"
+      @change="change('summary', ...arguments)"
     />
     <text-area
       label="Description"
+      hint="The rest of the description that doesn't fit in the summary goes here"
       :value="model.description"
       :error-messages="errors.description"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['description'], value, ack})"
+      @change="change('description', ...arguments)"
     />
     <form-sections>
-      <form-section name="Results">
-        <results-form
-          :model="model.results"
-          :parent-target="model.target"
-          @change="({path, value, ack}) => $emit('change', {path: ['results', ...path], value, ack})"
-          @push="({path, value, ack}) => $emit('push', {path: ['results', ...path], value, ack})"
-          @pull="({path, ack}) => $emit('pull', {path: ['results', ...path], ack})"
-        />
-      </form-section>
       <form-section name="Resources">
         <resources-form
           :model="model.resources"
@@ -51,23 +55,13 @@
         />
       </form-section>
       <form-section name="Advanced">
-        <text-field
-          v-if="attackForm"
-          label="Ammunition"
-          hint="The variable name of the item used as ammunition"
-          :value="model.ammunition"
-          :error-messages="errors.ammunition"
-          :debounce-time="debounceTime"
-          @change="(value, ack) => $emit('change', {path: ['ammunition'], value, ack})"
-        />
-        <v-combobox
+        <smart-combobox
           label="Tags"
           multiple
           chips
           deletable-chips
-          box
           :value="model.tags"
-          @change="(value) => $emit('change', {path: ['tags'], value})"
+          @change="change('tags', ...arguments)"
         />
         <smart-select
           label="Target"
@@ -76,8 +70,7 @@
           :value="model.target"
           :error-messages="errors.target"
           :menu-props="{auto: true, lazy: true}"
-          :debounce-time="debounceTime"
-          @change="(value, ack) => $emit('change', {path: ['target'], value, ack})"
+          @change="change('target', ...arguments)"
         />
         <div class="layout row wrap">
           <text-field
@@ -86,8 +79,7 @@
             style="flex-basis: 300px;"
             :value="model.uses"
             :error-messages="errors.uses"
-            :debounce-time="debounceTime"
-            @change="(value, ack) => $emit('change', {path: ['uses'], value, ack})"
+            @change="change('uses', ...arguments)"
           />
           <text-field
             label="Uses used"
@@ -96,8 +88,7 @@
             style="flex-basis: 300px;"
             :value="model.usesUsed"
             :error-messages="errors.uses"
-            :debounce-time="debounceTime"
-            @change="(value, ack) => $emit('change', {path: ['usesUsed'], value, ack})"
+            @change="change('usesUsed', ...arguments)"
           />
         </div>
         <smart-select
@@ -108,8 +99,7 @@
           :value="model.reset"
           :error-messages="errors.reset"
           :menu-props="{auto: true, lazy: true}"
-          :debounce-time="debounceTime"
-          @change="(value, ack) => $emit('change', {path: ['reset'], value, ack})"
+          @change="change('reset', ...arguments)"
         />
       </form-section>
     </form-sections>
@@ -118,34 +108,19 @@
 
 <script>
   import FormSection, {FormSections} from '/imports/ui/properties/forms/shared/FormSection.vue';
-  import ResultsForm from '/imports/ui/properties/forms/ResultsForm.vue';
   import ResourcesForm from '/imports/ui/properties/forms/ResourcesForm.vue';
+  import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
 
   export default {
     components: {
       FormSection,
       FormSections,
-      ResultsForm,
       ResourcesForm,
     },
+    mixins: [propertyFormMixin],
     props: {
-      stored: {
-        type: Boolean,
-      },
-      model: {
-        type: Object,
-        default: () => ({}),
-      },
-      errors: {
-        type: Object,
-        default: () => ({}),
-      },
       attackForm: {
         type: Boolean,
-      },
-      debounceTime: {
-        type: Number,
-        default: undefined,
       },
     },
     data(){

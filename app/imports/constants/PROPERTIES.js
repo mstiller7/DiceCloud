@@ -1,35 +1,43 @@
 const PROPERTIES = Object.freeze({
   action: {
-    icon: 'offline_bolt',
+    icon: '$vuetify.icons.action',
     name: 'Action'
   },
   attack: {
-    icon: 'bolt',
+    icon: '$vuetify.icons.attack',
     name: 'Attack'
   },
   attribute: {
-    icon: 'donut_small',
+    icon: '$vuetify.icons.attribute',
     name: 'Attribute'
   },
+  adjustment: {
+    icon: '$vuetify.icons.attribute_damage',
+    name: 'Attribute damage'
+  },
   buff: {
-    icon: 'star',
+    icon: '$vuetify.icons.buff',
     name: 'Buff'
   },
   classLevel: {
-    icon: 'school',
+    icon: '$vuetify.icons.class_level',
     name: 'Class level'
   },
+  container: {
+    icon: 'work',
+    name: 'Container'
+  },
+  damage: {
+    icon: '$vuetify.icons.damage',
+    name: 'Damage'
+  },
   damageMultiplier: {
-    icon: 'layers',
+    icon: '$vuetify.icons.damage_multiplier',
     name: 'Damage multiplier'
   },
   effect: {
-    icon: 'show_chart',
+    icon: '$vuetify.icons.effect',
     name: 'Effect'
-  },
-  experience: {
-    icon: 'add',
-    name: 'Experience'
   },
   feature: {
     icon: 'subject',
@@ -38,6 +46,10 @@ const PROPERTIES = Object.freeze({
   folder: {
     icon: 'folder',
     name: 'Folder'
+  },
+  item: {
+    icon: '$vuetify.icons.item',
+    name: 'Item'
   },
   note: {
     icon: 'note',
@@ -48,32 +60,32 @@ const PROPERTIES = Object.freeze({
     name: 'Proficiency'
   },
   roll: {
-    icon: 'flare',
+    icon: '$vuetify.icons.roll',
     name: 'Roll'
   },
   savingThrow: {
-    icon: 'all_out',
+    icon: '$vuetify.icons.saving_throw',
     name: 'Saving throw'
   },
   skill: {
-    icon: 'check_box',
+    icon: '$vuetify.icons.skill',
     name: 'Skill'
   },
+  propertySlot: {
+    icon: 'tab_unselected',
+    name: 'Slot'
+  },
   spellList: {
-    icon: 'list',
+    icon: '$vuetify.icons.spell_list',
     name: 'Spell list'
   },
   spell: {
-    icon: 'whatshot',
+    icon: '$vuetify.icons.spell',
     name: 'Spell'
   },
-  container: {
-    icon: 'work',
-    name: 'Container'
-  },
-  item: {
-    icon: 'category',
-    name: 'Item'
+  toggle: {
+    icon: '$vuetify.icons.toggle',
+    name: 'Toggle'
   },
 });
 

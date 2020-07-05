@@ -1,21 +1,25 @@
 import { RouterFactory, nativeScrollBehavior } from 'meteor/akryum:vue-router2';
-import getEntitledCents from '/imports/api/users/patreon/getEntitledCents.js';
-import LAUNCH_DATE from '/imports/constants/LAUNCH_DATE.js';
+import { acceptInviteToken } from '/imports/api/users/Invites.js';
 
 // Components
 import Home from '/imports/ui/pages/Home.vue';
+import About from '/imports/ui/pages/About.vue';
 import CharacterList from '/imports/ui/pages/CharacterList.vue';
 import Library from '/imports/ui/pages/Library.vue';
+import SingleLibraryPage from '/imports/ui/pages/SingleLibraryPage.vue'
+import SingleLibraryToolbarItems from '/imports/ui/library/SingleLibraryToolbarItems.vue'
 import CharacterSheetPage from '/imports/ui/pages/CharacterSheetPage.vue';
-import CharacterSheetToolbarItems from '/imports/ui/creature/character/CharacterSheetToolbarItems.vue';
-import CharacterSheetToolbarExtension from '/imports/ui/creature/character/CharacterSheetToolbarExtension.vue';
+import CharacterSheetToolbar from '/imports/ui/creature/character/CharacterSheetToolbar.vue';
 import SignIn from '/imports/ui/pages/SignIn.vue' ;
 import Register from '/imports/ui/pages/Register.vue';
-import Friends from '/imports/ui/pages/Friends.vue' ;
+import IconAdmin from '/imports/ui/icons/IconAdmin.vue';
+//import Friends from '/imports/ui/pages/Friends.vue' ;
+import Feedback from '/imports/ui/pages/Feedback.vue' ;
 import Account from '/imports/ui/pages/Account.vue' ;
+import InviteSuccess from '/imports/ui/pages/InviteSuccess.vue' ;
+import InviteError from '/imports/ui/pages/InviteError.vue' ;
 import NotImplemented from '/imports/ui/pages/NotImplemented.vue';
 import PatreonLevelTooLow from '/imports/ui/pages/PatreonLevelTooLow.vue';
-import LaunchCountdown from '/imports/ui/pages/LaunchCountdown.vue';
 
 let userSubscription = Meteor.subscribe('user');
 
@@ -36,43 +40,55 @@ function ensureLoggedIn(to, from, next){
       if (user){
         next()
       } else {
-        next('/sign-in');
+        next({ name: 'signIn', query: { redirect: to.path} });
       }
     }
   });
 }
 
-function ensurePatronTier5(to, from, next){
+function ensureAdmin(to, from, next){
   Tracker.autorun((computation) => {
     if (userSubscription.ready()){
       computation.stop();
       const user = Meteor.user();
-      if (!user){
-        next('/sign-in');
-        return;
-      }
-      let entitledCents = getEntitledCents(user);
-      if (entitledCents < 500){
-        next('/patreon-level-too-low');
+      if (user){
+        if (user.roles && user.roles.includes('admin')){
+          next()
+        } else {
+          next({name: 'home'});
+        }
       } else {
-        next();
+        next({ name: 'signIn', query: { redirect: to.path} });
+      }
+    }
+  });
+}
+
+function claimInvite(to, from, next){
+  Tracker.autorun((computation) => {
+    if (userSubscription.ready()){
+      computation.stop();
+      const user = Meteor.user();
+      if (user){
+        let inviteToken = to.params.inviteToken;
+        acceptInviteToken.call({
+          inviteToken
+        }, (error) => {
+          if (error){
+            next({name: 'inviteError', params: {error}});
+          } else {
+            next('/invite-success')
+          }
+        });
+      } else {
+        next({ name: 'signIn', query: { redirect: to.path} });
       }
     }
   });
 }
 
 RouterFactory.configure(factory => {
-  factory.addRoutes([
-    {
-      path: '/countdown',
-      name: 'Countdown',
-      components: {
-        default: LaunchCountdown,
-      },
-      meta: {
-        title: 'Countdown to Launch',
-      },
-    },{
+  factory.addRoutes([{
       path: '/',
       name: 'home',
       components: {
@@ -89,7 +105,7 @@ RouterFactory.configure(factory => {
       meta: {
         title: 'Character List',
       },
-      beforeEnter: ensurePatronTier5,
+      beforeEnter: ensureLoggedIn,
     },{
       path: '/library',
       components: {
@@ -98,39 +114,46 @@ RouterFactory.configure(factory => {
       meta: {
         title: 'Library',
       },
-      beforeEnter: ensurePatronTier5,
+      beforeEnter: ensureLoggedIn,
+    },{
+      name: 'singleLibrary',
+      path: '/library/:id',
+      components: {
+        default: SingleLibraryPage,
+        toolbarItems: SingleLibraryToolbarItems,
+      },
+      meta: {
+        title: 'Library',
+      },
     },{
       path: '/character/:id/:urlName',
       components: {
         default: CharacterSheetPage,
-        toolbarExtension: CharacterSheetToolbarExtension,
-        toolbarItems: CharacterSheetToolbarItems,
+        toolbar: CharacterSheetToolbar,
       },
       meta: {
         title: 'Character Sheet',
       },
-      beforeEnter: ensurePatronTier5,
     },{
       path: '/character/:id',
       components: {
         default: CharacterSheetPage,
-        toolbarExtension: CharacterSheetToolbarExtension,
-        toolbarItems: CharacterSheetToolbarItems,
+        toolbar: CharacterSheetToolbar,
       },
       meta: {
         title: 'Character Sheet',
       },
-      beforeEnter: ensurePatronTier5,
     },{
       path: '/friends',
       components: {
-        default: Friends,
+        default: NotImplemented,
       },
       meta: {
         title: 'Friends',
       },
       beforeEnter: ensureLoggedIn,
     },{
+      name: 'signIn',
 			path: '/sign-in',
       components: {
         default: SignIn,
@@ -138,15 +161,16 @@ RouterFactory.configure(factory => {
       meta: {
         title: 'Sign In',
       },
-		},/*{
+		},{
+      name: 'register',
 			path: '/register',
       components: {
         default: Register,
       },
       meta: {
-        title: 'Home',
+        title: 'Register',
       },
-		},*/{
+		},{
 			path: '/account',
       components: {
         default: Account,
@@ -158,10 +182,41 @@ RouterFactory.configure(factory => {
 		},{
       path: '/feedback',
       components: {
-        default: NotImplemented,
+        default: Feedback,
       },
       meta: {
         title: 'Feedback',
+      },
+    },{
+      path: '/about',
+      components: {
+        default: About,
+      },
+      meta: {
+        title: 'About DiceCloud',
+      },
+    },{
+      path: '/invite/:inviteToken',
+      beforeEnter: claimInvite,
+    },{
+      name: 'inviteError',
+      path: '/invite-error',
+      components: {
+        default: InviteError,
+      },
+      props: {
+        default: true,
+      },
+      meta: {
+        title: 'Invite Error',
+      },
+    },{
+      path: '/invite-success',
+      components: {
+        default: InviteSuccess,
+      },
+      meta: {
+        title: 'Invite Success',
       },
     },{
       path: '/patreon-level-too-low',
@@ -171,19 +226,13 @@ RouterFactory.configure(factory => {
       meta: {
         title: 'Patreon Tier Too Low',
       },
+    },{
+      path: '/icon-admin',
+      name: 'iconAdmin',
+      component: IconAdmin,
+      beforeEnter: ensureAdmin,
     },
   ]);
-  // Icon admin routes
-  if (Meteor.isDevelopment){
-    let IconAdmin = require('/imports/ui/icons/IconAdmin.vue').default;
-    factory.addRoutes([
-      {
-        path: '/icon-admin',
-        name: 'iconAdmin',
-        component: IconAdmin,
-      },
-    ]);
-  }
 });
 
 // Not found route has lowest priority
@@ -199,13 +248,10 @@ const router = routerFactory.create();
 router.beforeEach((to, from, next) => {
   let user = Meteor.user();
   if (
-    to.path === '/countdown' ||
     to.path === '/sign-in' ||
     (user && user.roles && user.roles.includes('admin'))
   ){
     next();
-  } else if (new Date() < LAUNCH_DATE){
-    next('/countdown');
   } else {
     next();
   }

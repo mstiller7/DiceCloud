@@ -1,13 +1,17 @@
+import { ValidatedMethod } from 'meteor/mdg:validated-method';
+import { RateLimiterMixin } from 'ddp-rate-limiter-mixin';
 import SimpleSchema from 'simpl-schema';
 import deathSaveSchema from '/imports/api/properties/subSchemas/DeathSavesSchema.js'
 import ColorSchema from '/imports/api/properties/subSchemas/ColorSchema.js';
 import SharingSchema from '/imports/api/sharing/SharingSchema.js';
-import {assertEditPermission, assertOwnership} from '/imports/api/sharing/sharingPermissions.js';
+import {assertEditPermission} from '/imports/api/sharing/sharingPermissions.js';
+import { getUserTier } from '/imports/api/users/patreon/tiers.js';
 
 import '/imports/api/creature/removeCreature.js';
+import '/imports/api/creature/restCreature.js';
 
 //set up the collection for creatures
-Creatures = new Mongo.Collection('creatures');
+let Creatures = new Mongo.Collection('creatures');
 
 let CreatureSettingsSchema = new SimpleSchema({
 	//slowed down by carrying too much?
@@ -25,6 +29,18 @@ let CreatureSettingsSchema = new SimpleSchema({
 		type: Boolean,
 		optional: true,
 	},
+  // Hide all the unused stats
+  hideUnusedStats: {
+    type: Boolean,
+    optional: true,
+  },
+  // How much each hitDice resets on a long rest
+  hitDiceResetMultiplier: {
+    type: Number,
+    optional: true,
+    min: 0,
+    max: 1,
+  }
 });
 
 let CreatureSchema = new SimpleSchema({
@@ -33,13 +49,6 @@ let CreatureSchema = new SimpleSchema({
 		type: String,
 		defaultValue: '',
 		optional: true,
-	},
-	urlName: {
-		type: String,
-		optional: true,
-		autoValue: function() {
-			return getSlug(this.field('name').value, {maintainCase: true}) || '-';
-		},
 	},
 	alignment: {
 		type: String,
@@ -53,22 +62,33 @@ let CreatureSchema = new SimpleSchema({
 		type: String,
 		optional: true
 	},
-
+  avatarPicture: {
+    type: String,
+    optional: true,
+  },
 	// Mechanics
 	deathSave: {
 		type: deathSaveSchema,
 		defaultValue: {},
 	},
-	xp: {
+  // Stats that are computed and denormalised outside of recomputation
+  denormalizedStats: {
+    type: Object,
+    defaultValue: {},
+  },
+  // Sum of all XP gained by this character
+	'denormalizedStats.xp': {
 		type: SimpleSchema.Integer,
 		defaultValue: 0,
 	},
-	weightCarried: {
+  // Sum of all levels granted by milestone XP
+  'denormalizedStats.milestoneLevels': {
+    type: SimpleSchema.Integer,
+    defaultValue: 0,
+  },
+  // Sum of all weights of items and containers that are carried
+	'denormalizedStats.weightCarried': {
 		type: Number,
-		defaultValue: 0,
-	},
-	level: {
-		type: SimpleSchema.Integer,
 		defaultValue: 0,
 	},
 	type: {
@@ -76,6 +96,11 @@ let CreatureSchema = new SimpleSchema({
 		defaultValue: 'pc',
 		allowedValues: ['pc', 'npc', 'monster'],
 	},
+  damageMultipliers: {
+    type: Object,
+		blackbox: true,
+		defaultValue: {}
+  },
 	variables: {
 		type: Object,
 		blackbox: true,
@@ -96,14 +121,25 @@ Creatures.attachSchema(CreatureSchema);
 
 const insertCreature = new ValidatedMethod({
 
-  name: 'Creatures.methods.insertCreature',
+  name: 'creatures.insertCreature',
 
   validate: null,
+
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
 
   run() {
     if (!this.userId) {
       throw new Meteor.Error('Creatures.methods.insert.denied',
       'You need to be logged in to insert a creature');
+    }
+    let tier = getUserTier(this.userId);
+    if (!tier.paidBenefits){
+      throw new Meteor.Error('Creatures.methods.insert.denied',
+      `The ${tier.name} tier does not allow you to insert a creature`);
     }
 
 		// Create the creature document
@@ -117,24 +153,43 @@ const insertCreature = new ValidatedMethod({
 });
 
 const updateCreature = new ValidatedMethod({
-  name: 'Creatures.methods.update',
-  validate({_id, path, value}){
+  name: 'creatures.update',
+  validate({_id, path}){
 		if (!_id) return false;
 		// Allowed fields
-		let allowedFields = ['name', 'alignment', 'gender', 'picture', 'settings'];
+		let allowedFields = [
+      'name',
+      'alignment',
+      'gender',
+      'picture',
+      'avatarPicture',
+      'color',
+      'settings',
+    ];
 		if (!allowedFields.includes(path[0])){
 			throw new Meteor.Error('Creatures.methods.update.denied',
       'This field can\'t be updated using this method');
 		}
   },
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
   run({_id, path, value}) {
 		let creature = Creatures.findOne(_id);
     assertEditPermission(creature, this.userId);
-		Creatures.update(_id, {
-			$set: {[path.join('.')]: value},
-		});
+    if (value === undefined || value === null){
+      Creatures.update(_id, {
+        $unset: {[path.join('.')]: 1},
+      });
+    } else {
+      Creatures.update(_id, {
+        $set: {[path.join('.')]: value},
+      });
+    }
   },
 });
 
 export default Creatures;
-export { CreatureSchema, insertCreature, removeCreature, updateCreature };
+export { CreatureSchema, insertCreature, updateCreature };

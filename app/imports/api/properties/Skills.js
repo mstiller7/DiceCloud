@@ -1,4 +1,6 @@
 import SimpleSchema from 'simpl-schema';
+import VARIABLE_NAME_REGEX from '/imports/constants/VARIABLE_NAME_REGEX.js';
+import ErrorSchema from '/imports/api/properties/subSchemas/ErrorSchema.js';
 
 /*
  * Skills are anything that results in a modifier to be added to a D20
@@ -13,7 +15,8 @@ let SkillSchema = new SimpleSchema({
   // Ignored for skilltype = save
   variableName: {
     type: String,
-		regEx: /^\w*[a-z]\w*$/i,
+    regEx: VARIABLE_NAME_REGEX,
+    min: 2,
   },
 	// The variable name of the ability this skill relies on
   ability: {
@@ -24,19 +27,20 @@ let SkillSchema = new SimpleSchema({
   skillType: {
     type: String,
     allowedValues: [
-      "skill",
-      "save",
-			"check",
-      "tool",
-      "weapon",
-      "language",
-			"utility", //not displayed anywhere
+      'skill',
+      'save',
+			'check',
+      'tool',
+      'weapon',
+      'armor',
+      'language',
+			'utility', //not displayed anywhere
     ],
     defaultValue: 'skill',
   },
-	// If the baseValue is higher than the computed value, it will be used as `value`
-	baseValue: {
-		type: Number,
+  // The starting value, before effects
+	baseValueCalculation: {
+		type: String,
 		optional: true,
 	},
 	// The base proficiency of this skill
@@ -56,6 +60,18 @@ let ComputedOnlySkillSchema = new SimpleSchema({
   value: {
     type: Number,
 		defaultValue: 0,
+  },
+  // The result of baseValueCalculation
+  baseValue: {
+    type: SimpleSchema.oneOf(Number, String, Boolean),
+    optional: true,
+  },
+  baseValueErrors: {
+    type: Array,
+    optional: true,
+  },
+  'baseValueErrors.$': {
+    type: ErrorSchema,
   },
 	// Computed value added by the ability
 	abilityMod: {
@@ -98,6 +114,11 @@ let ComputedOnlySkillSchema = new SimpleSchema({
 	// Computed number of things forcing this skill to fail
   fail: {
     type: SimpleSchema.Integer,
+    optional: true,
+  },
+  // Should this attribute hide
+  hide: {
+    type: Boolean,
     optional: true,
   },
 })

@@ -2,23 +2,23 @@
   <div class="attribute-form">
     <div class="layout column align-center">
       <text-field
+        ref="focusFirst"
         label="Base Value"
         class="base-value-field"
         hint="This is the value of the attribute before effects are applied"
         style="width: 332px;"
         :value="model.baseValueCalculation"
         :error-messages="errors.baseValueCalculation"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['baseValueCalculation'], value, ack})"
+        @change="change('baseValueCalculation', ...arguments)"
       />
     </div>
+    <calculation-error-list :errors="model.baseValueErrors" />
     <div class="layout row wrap">
       <text-field
         label="Name"
         :value="model.name"
         :error-messages="errors.name"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['name'], value, ack})"
+        @change="change('name', ...arguments)"
       />
       <text-field
         label="Variable name"
@@ -26,8 +26,7 @@
         style="flex-basis: 300px;"
         hint="Use this name in formulae to reference this attribute"
         :error-messages="errors.variableName"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['variableName'], value, ack})"
+        @change="change('variableName', ...arguments)"
       />
     </div>
     <smart-select
@@ -37,8 +36,7 @@
       :error-messages="errors.attributeType"
       :menu-props="{auto: true, lazy: true}"
       :hint="attributeTypeHints[model.attributeType]"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['attributeType'], value, ack})"
+      @change="change('attributeType', ...arguments)"
     />
     <smart-select
       v-if="model.attributeType === 'hitDice'"
@@ -47,28 +45,34 @@
       :value="model.hitDiceSize"
       :error-messages="errors.hitDiceSize"
       :menu-props="{auto: true, lazy: true}"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['hitDiceSize'], value, ack})"
+      @change="change('hitDiceSize', ...arguments)"
     />
+    <text-field
+      v-if="model.attributeType === 'spellSlot'"
+      label="Spell slot level"
+      :value="model.spellSlotLevelCalculation"
+      :error-messages="errors.spellSlotLevelCalculation"
+      @change="change('spellSlotLevelCalculation', ...arguments)"
+    />
+    <calculation-error-list :errors="model.spellSlotLevelErrors" />
     <text-area
       label="Description"
       :value="model.description"
       :error-messages="errors.description"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['description'], value, ack})"
+      @change="change('description', ...arguments)"
     />
     <form-section
       name="Advanced"
       standalone
     >
       <div class="layout column align-center">
-        <v-switch
+        <smart-switch
           v-if="model.attributeType !== 'hitDice'"
           label="Allow decimal values"
           class="no-flex"
-          :input-value="model.decimal"
+          :value="model.decimal"
           :error-messages="errors.decimal"
-          @change="e => $emit('change', {path: ['decimal'], value: !!e})"
+          @change="change('decimal', ...arguments)"
         />
         <div
           class="layout row justify-center"
@@ -82,8 +86,7 @@
             hint="The attribute's final value is reduced by this amount"
             :value="model.damage"
             :error-messages="errors.damage"
-            :debounce-time="debounceTime"
-            @change="(value, ack) => $emit('change', {path: ['damage'], value, ack})"
+            @change="change('damage', ...arguments)"
           />
         </div>
       </div>
@@ -97,8 +100,7 @@
           :value="model.reset"
           :error-messages="errors.reset"
           :menu-props="{auto: true, lazy: true}"
-          :debounce-time="debounceTime"
-          @change="(value, ack) => $emit('change', {path: ['reset'], value: value, ack})"
+          @change="change('reset', ...arguments)"
         />
       </div>
     </form-section>
@@ -107,25 +109,15 @@
 
 <script>
 	import FormSection from '/imports/ui/properties/forms/shared/FormSection.vue';
+  import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
+  import CalculationErrorList from '/imports/ui/properties/forms/shared/CalculationErrorList.vue';
 
 	export default {
 		components: {
 			FormSection,
+      CalculationErrorList,
 		},
-		props: {
-			model: {
-				type: Object,
-				default: () => ({}),
-			},
-			errors: {
-				type: Object,
-				default: () => ({}),
-			},
-      debounceTime: {
-        type: Number,
-        default: undefined,
-      },
-		},
+    mixins: [propertyFormMixin],
 		data(){
 			let data = {
 				attributeTypes: [

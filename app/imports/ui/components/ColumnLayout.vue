@@ -36,6 +36,12 @@ export default {
 		padding: 4px;
 	}
 	.column-layout >>> > div {
+    /*
+      Table and width set because firefox does not support break-inside: avoid
+    */
+    display: table;
+    table-layout: fixed;
+    width: 100%;
 		-webkit-backface-visibility: hidden;
 		-webkit-transform: translateX(0);
 		-webkit-column-break-inside: avoid;

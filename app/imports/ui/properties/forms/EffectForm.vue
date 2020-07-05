@@ -1,90 +1,78 @@
 <template lang="html">
   <div class="effect-form">
     <text-field
+      ref="focusFirst"
       label="Name"
       :value="model.name"
       :error-messages="errors.name"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['name'], value, ack})"
+      @change="change('name', ...arguments)"
     />
-    <div class="layout row wrap justify-start">
-      <smart-select
-        label="Operation"
-        append-icon="arrow_drop_down"
-        class="mx-2"
-        :error-messages="errors.operation"
-        :menu-props="{transition: 'slide-y-transition', lazy: true}"
-        :items="operations"
-        :value="model.operation"
-        @change="(value, ack) => $emit('change', {path: ['operation'], value, ack})"
+    <smart-select
+      label="Operation"
+      append-icon="arrow_drop_down"
+      class="mx-2"
+      :error-messages="errors.operation"
+      :menu-props="{transition: 'slide-y-transition', lazy: true}"
+      :items="operations"
+      :value="model.operation"
+      @change="change('operation', ...arguments)"
+    >
+      <v-icon
+        slot="prepend"
+        class="icon"
+        :class="iconClass"
+      >
+        {{ displayedIcon }}
+      </v-icon>
+      <template
+        slot="item"
+        slot-scope="item"
       >
         <v-icon
-          slot="prepend"
-          class="icon"
-          :class="iconClass"
+          class="icon mr-2"
         >
-          {{ displayedIcon }}
+          {{ getEffectIcon(item.item.value, 1) }}
         </v-icon>
-        <template
-          slot="item"
-          slot-scope="item"
-        >
-          <v-icon
-            class="icon mr-2"
-          >
-            {{ getEffectIcon(item.item.value, 1) }}
-          </v-icon>
-          {{ item.item.text }}
-        </template>
-      </smart-select>
-
-      <text-field
-        label="Value"
-        class="mr-2"
-        :persistent-hint="needsValue"
-        :value="needsValue ? (model.calculation) : ' '"
-        :disabled="!needsValue"
-        :error-messages="errors.calculation"
-        :hint="!isFinite(model.calculation) && model.result ? model.result + '' : '' "
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['calculation'], value, ack})"
-      />
-
-      <smart-combobox
-        label="Stat"
-        class="mr-2"
-        multiple
-        :value="model.stats"
-        :items="attributeList"
-        :error-messages="errors.stats"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['stats'], value, ack})"
-      />
-    </div>
+        {{ item.item.text }}
+      </template>
+    </smart-select>
+    <smart-combobox
+      label="Stats"
+      class="mr-2"
+      multiple
+      chips
+      deletable-chips
+      :value="model.stats"
+      :items="attributeList"
+      :error-messages="errors.stats"
+      @change="change('stats', ...arguments)"
+    />
+    <text-field
+      label="Value"
+      class="mr-2"
+      :persistent-hint="needsValue"
+      :value="needsValue ? (model.calculation) : ' '"
+      :disabled="!needsValue"
+      :error-messages="errors.calculation"
+      :hint="!isFinite(model.calculation) && model.result ? model.result + '' : '' "
+      @change="change('calculation', ...arguments)"
+    />
+    <calculation-error-list :errors="model.errors" />
   </div>
 </template>
 
 <script>
 	import getEffectIcon from '/imports/ui/utility/getEffectIcon.js';
+  import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
   import attributeListMixin from '/imports/ui/properties/forms/shared/lists/attributeListMixin.js';
+  import CalculationErrorList from '/imports/ui/properties/forms/shared/CalculationErrorList.vue';
 
 	const ICON_SPIN_DURATION = 300;
 	export default {
-    mixins: [attributeListMixin],
-		props: {
-			model: {
-				type: Object,
-				default: () => ({}),
-			},
-			errors: {
-				type: Object,
-				default: () => ({}),
-			},
-      debounceTime: {
-        type: Number,
-        default: undefined,
-      },
-		},
+    components: {
+      CalculationErrorList,
+    },
+    mixins: [propertyFormMixin, attributeListMixin],
 		data(){ return {
 			displayedIcon: 'add',
 			iconClass: '',
@@ -93,7 +81,8 @@
 				{value: 'add', text: 'Add'},
 				{value: 'mul', text: 'Multiply'},
 				{value: 'min', text: 'Minimum'},
-				{value: 'max', text: 'Maximum'},
+        {value: 'max', text: 'Maximum'},
+				{value: 'set', text: 'Set'},
 				{value: 'advantage', text: 'Advantage'},
 				{value: 'disadvantage', text: 'Disadvantage'},
 				{value: 'passiveAdd', text: 'Passive Bonus'},
@@ -108,12 +97,14 @@
 					case 'add': return true;
 					case 'mul': return true;
 					case 'min': return true;
-					case 'max': return true;
+          case 'max': return true;
+					case 'set': return true;
 					case 'advantage': return false;
 					case 'disadvantage': return false;
 					case 'passiveAdd': return true;
 					case 'fail': return false;
-					case 'conditional': return true;
+          case 'conditional': return false;
+					case 'rollBonus': return true;
           default: return true;
 				}
 			},

@@ -7,57 +7,34 @@
         class="base-value-field text-xs-center large-format no-flex"
         :value="model.level"
         :error-messages="errors.level"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['level'], value, ack})"
+        @change="change('level', ...arguments)"
       />
     </div>
     <div class="layout row wrap">
       <text-field
+        ref="focusFirst"
         label="Name"
         :value="model.name"
         :error-messages="errors.name"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['name'], value, ack})"
+        @change="change('name', ...arguments)"
       />
       <text-field
-        label="Variable name"
+        label="Class variable name"
         :value="model.variableName"
         style="flex-basis: 300px;"
-        hint="Use this name in formulae to reference this class"
+        hint="This should be the same for each level in a class"
         :error-messages="errors.variableName"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['variableName'], value, ack})"
-      />
-      <text-field
-        label="Base Class Variable name"
-        :value="model.baseClass"
-        style="flex-basis: 300px;"
-        hint="This is the name of the class this class level belongs to"
-        :error-messages="errors.baseClass"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['baseClass'], value, ack})"
+        @change="change('variableName', ...arguments)"
       />
     </div>
   </div>
 </template>
 
 <script>
+  import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
 
 	export default {
-		props: {
-			model: {
-				type: Object,
-				default: () => ({}),
-			},
-			errors: {
-				type: Object,
-				default: () => ({}),
-			},
-      debounceTime: {
-        type: Number,
-        default: undefined,
-      },
-		},
+    mixins: [propertyFormMixin],
 	};
 </script>
 

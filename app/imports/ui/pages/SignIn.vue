@@ -13,7 +13,6 @@
           width="120px"
           class="ma-3"
         />
-        <!--
         <v-text-field
           v-model="name"
           type="text"
@@ -46,12 +45,11 @@
           </v-btn>
           <v-btn
             color="accent"
-            to="/register"
+            :to="{ name: 'register', query: { redirect: this.$route.query.redirect} }"
           >
             Register
           </v-btn>
         </v-layout>
-        -->
       </v-layout>
     </v-form>
     <v-divider class="ma-4" />
@@ -59,7 +57,6 @@
       column
       align-center
     >
-      <!--
       <div class="error--text">
         {{ googleError }}
       </div>
@@ -69,7 +66,6 @@
       >
         Sign in with Google
       </v-btn>
-      -->
       <div class="error--text">
         {{ patreonError }}
       </div>
@@ -85,7 +81,6 @@
 
 <script>
   import { Meteor } from 'meteor/meteor'
-	import router from '/imports/ui/router.js';
 	export default{
 		data: () => ({
       valid: true,
@@ -108,7 +103,7 @@
 						if (error){
 							this.error = error.reason;
 						} else {
-							router.push('characterList');
+              this.$router.push(this.$route.query.redirect || 'characterList');
 						}
 					});
         }
@@ -119,7 +114,7 @@
             console.error(error);
             this.googleError = error.message;
           } else {
-            router.push('characterList');
+            this.$router.push(this.$route.query.redirect || 'characterList');
           }
 				});
 			},
@@ -129,7 +124,7 @@
             console.error(error);
             this.patreonError = error.message;
           } else {
-            router.push('characterList');
+            this.$router.push(this.$route.query.redirect || 'characterList');
           }
 				});
 			}

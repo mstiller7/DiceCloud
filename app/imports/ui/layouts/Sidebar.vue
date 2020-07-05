@@ -1,5 +1,14 @@
 <template>
   <div class="sidebar">
+    <v-alert
+      icon="priority_high"
+      type="error"
+      dismissible
+      :value="true"
+    >
+      This version of DiceCloud is in beta. Some data stored here may be destroyed by
+      future updates.
+    </v-alert>
     <v-layout
       v-if="!signedIn"
       row
@@ -49,12 +58,24 @@
       </v-list-tile>
       <v-divider />
     </v-list>
-    <v-list dense>
+    <v-list
+      avatar
+    >
       <v-list-tile
         v-for="character in CreaturesWithNoParty"
         :key="character._id"
         :to="character.url"
       >
+        <v-list-tile-avatar :color="character.color || 'grey'">
+          <img
+            v-if="character.avatarPicture"
+            :src="character.avatarPicture"
+            :alt="character.name"
+          >
+          <template v-else>
+            {{ character.initial }}
+          </template>
+        </v-list-tile-avatar>
         <v-list-tile-title>
           {{ character.name }}
         </v-list-tile-title>
@@ -73,6 +94,16 @@
           :key="character._id"
           :to="character.url"
         >
+          <v-list-tile-avatar :color="character.color || 'grey'">
+            <img
+              v-if="character.avatarPicture"
+              :src="character.avatarPicture"
+              :alt="character.name"
+            >
+            <template v-else>
+              {{ character.initial }}
+            </template>
+          </v-list-tile-avatar>
           <v-list-tile-title>
             {{ character.name }}
           </v-list-tile-title>
@@ -104,8 +135,9 @@
           {title: 'Home', icon: 'home', to: '/'},
           {title: 'Characters', icon: 'portrait', to: '/characterList', requireLogin: true},
           {title: 'Library', icon: 'book', to: '/library', requireLogin: true},
-          {title: 'Friends', icon: 'people', to: '/friends', requireLogin: true},
-          {title: 'Send Feedback', icon: 'bug_report', to: '/feedback'},
+          //{title: 'Friends', icon: 'people', to: '/friends', requireLogin: true},
+          {title: 'Feedback', icon: 'bug_report', to: '/feedback'},
+          {title: 'About', icon: 'subject', to: '/about'},
           {title: 'Patreon', icon: '', href: 'https://www.patreon.com/dicecloud'},
           {title: 'Github', icon: '', href: 'https://github.com/ThaumRystra/DiceCloud/tree/version-2'},
         ];
@@ -127,6 +159,7 @@
             }
           ).map(char => {
             char.url = `/character/${char._id}/${char.urlName || '-'}`;
+            char.initial = char.name && char.name[0] || '?';
             return char;
           });
           return party;
@@ -144,6 +177,7 @@
           {sort: {name: 1}}
         ).map(char => {
           char.url = `/character/${char._id}/${char.urlName || '-'}`;
+          char.initial = char.name && char.name[0] || '?';
           return char;
         });
       },

@@ -2,12 +2,12 @@
   <div>
     <div class="layout row">
       <text-field
+        ref="focusFirst"
         label="Damage"
         style="flex-basis: 300px;"
-        :value="model.damage"
-        :error-messages="errors.damage"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['damage'], value, ack})"
+        :value="model.amount"
+        :error-messages="errors.amount"
+        @change="change('amount', ...arguments)"
       />
       <smart-select
         label="Damage Type"
@@ -16,45 +16,32 @@
         :value="model.damageType"
         :error-messages="errors.damageType"
         :menu-props="{auto: true}"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['damageType'], value, ack})"
+        @change="change('damageType', ...arguments)"
       />
     </div>
     <smart-select
-      v-if="parentTarget == 'multipleTargets'"
       label="Target"
       :hint="targetOptionHint"
       :items="targetOptions"
       :value="model.target"
       :error-messages="errors.target"
       :menu-props="{auto: true, lazy: true}"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['target'], value, ack})"
+      @change="change('target', ...arguments)"
     />
   </div>
 </template>
 
 <script>
 import DAMAGE_TYPES from '/imports/constants/DAMAGE_TYPES.js';
+import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
 
 export default {
+  mixins: [propertyFormMixin],
 	props: {
-		model: {
-			type: Object,
-			default: () => ({}),
-		},
-		errors: {
-			type: Object,
-			default: () => ({}),
-		},
 		parentTarget: {
 			type: String,
       default: undefined,
 		},
-    debounceTime: {
-      type: Number,
-      default: undefined,
-    },
 	},
 	data(){return{
 		DAMAGE_TYPES,

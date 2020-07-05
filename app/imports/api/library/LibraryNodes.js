@@ -1,13 +1,16 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
+import { RateLimiterMixin } from 'ddp-rate-limiter-mixin';
 import SimpleSchema from 'simpl-schema';
+import ColorSchema from '/imports/api/properties/subSchemas/ColorSchema.js';
 import ChildSchema from '/imports/api/parenting/ChildSchema.js';
 import propertySchemasIndex from '/imports/api/properties/propertySchemasIndex.js';
 import Libraries from '/imports/api/library/Libraries.js';
 import { assertEditPermission } from '/imports/api/sharing/sharingPermissions.js';
 import { softRemove } from '/imports/api/parenting/softRemove.js';
 import SoftRemovableSchema from '/imports/api/parenting/SoftRemovableSchema.js';
+import { storedIconsSchema } from '/imports/api/icons/Icons.js';
 
 let LibraryNodes = new Mongo.Collection('libraryNodes');
 
@@ -23,11 +26,16 @@ let LibraryNodeSchema = new SimpleSchema({
 	'tags.$': {
 		type: String,
 	},
+  icon: {
+    type: storedIconsSchema,
+    optional: true,
+  }
 });
 
 for (let key in propertySchemasIndex){
 	let schema = new SimpleSchema({});
 	schema.extend(LibraryNodeSchema);
+  schema.extend(ColorSchema);
 	schema.extend(propertySchemasIndex[key]);
 	schema.extend(ChildSchema);
 	schema.extend(SoftRemovableSchema);
@@ -49,16 +57,43 @@ function assertNodeEditPermission(node, userId){
 }
 
 const insertNode = new ValidatedMethod({
-  name: 'LibraryNodes.methods.insert',
+  name: 'libraryNodes.insert',
 	validate: null,
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
   run(libraryNode) {
+    delete libraryNode._id;
     assertNodeEditPermission(libraryNode, this.userId);
 		return LibraryNodes.insert(libraryNode);
   },
 });
 
+const duplicateNode = new ValidatedMethod({
+  name: 'libraryNodes.duplicate',
+	validate: new SimpleSchema({
+    _id: {
+      type: String,
+      regEx: SimpleSchema.RegEx.Id,
+    }
+  }).validator(),
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
+  run({_id}) {
+    let libraryNode = LibraryNodes.findOne(_id);
+    assertNodeEditPermission(libraryNode, this.userId);
+    delete libraryNode._id;
+		return LibraryNodes.insert(libraryNode);
+  },
+})
+
 const updateLibraryNode = new ValidatedMethod({
-  name: 'LibraryNodes.methods.update',
+  name: 'libraryNodes.update',
   validate({_id, path}){
 		if (!_id) return false;
 		// We cannot change these fields with a simple update
@@ -69,6 +104,11 @@ const updateLibraryNode = new ValidatedMethod({
       case 'ancestors':
 				return false;
 		}
+  },
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
   },
   run({_id, path, value}) {
     let node = LibraryNodes.findOne(_id);
@@ -88,8 +128,13 @@ const updateLibraryNode = new ValidatedMethod({
 });
 
 const pushToLibraryNode = new ValidatedMethod({
-	name: 'LibraryNodes.methods.push',
+	name: 'libraryNodes.push',
 	validate: null,
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
 	run({_id, path, value}){
 		let node = LibraryNodes.findOne(_id);
     assertNodeEditPermission(node, this.userId);
@@ -102,8 +147,13 @@ const pushToLibraryNode = new ValidatedMethod({
 });
 
 const pullFromLibraryNode = new ValidatedMethod({
-	name: 'LibraryNodes.methods.pull',
+	name: 'libraryNodes.pull',
 	validate: null,
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
 	run({_id, path, itemId}){
 		let node = LibraryNodes.findOne(_id);
     assertNodeEditPermission(node, this.userId);
@@ -117,10 +167,15 @@ const pullFromLibraryNode = new ValidatedMethod({
 });
 
 const softRemoveLibraryNode = new ValidatedMethod({
-	name: 'LibraryNodes.methods.softRemove',
+	name: 'libraryNodes.softRemove',
 	validate: new SimpleSchema({
 		_id: SimpleSchema.RegEx.Id
 	}).validator(),
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
 	run({_id}){
 		let node = LibraryNodes.findOne(_id);
     assertNodeEditPermission(node, this.userId);
@@ -132,6 +187,7 @@ export default LibraryNodes;
 export {
 	LibraryNodeSchema,
 	insertNode,
+  duplicateNode,
 	updateLibraryNode,
 	pullFromLibraryNode,
 	pushToLibraryNode,

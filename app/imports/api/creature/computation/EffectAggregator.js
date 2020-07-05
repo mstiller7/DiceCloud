@@ -2,9 +2,14 @@ import evaluateCalculation from '/imports/api/creature/computation/evaluateCalcu
 
 export default class EffectAggregator{
   constructor(stat, memo){
+    delete this.baseValueErrors;
     if (stat.baseValueCalculation){
-      this.statBaseValue = evaluateCalculation(stat.baseValueCalculation, memo);
-      this.base = +this.statBaseValue;
+      let {value, errors} = evaluateCalculation(stat.baseValueCalculation, memo);
+      this.statBaseValue = value;
+      if (errors.length){
+        this.baseValueErrors = errors;
+      }
+      this.base = this.statBaseValue;
     } else {
       this.base = 0;
     }
@@ -16,15 +21,23 @@ export default class EffectAggregator{
     this.disadvantage = 0;
     this.passiveAdd = 0;
     this.fail = 0;
+    this.set = undefined;
     this.conditional = [];
     this.rollBonus = [];
+    this.hasNoEffects = true;
   }
   addEffect(effect){
     let result = effect.result;
+    if (this.hasNoEffects) this.hasNoEffects = false;
     switch(effect.operation){
       case 'base':
         // Take the largest base value
         this.base = result > this.base ? result : this.base;
+        if (effect.statBase){
+          if (this.statBaseValue === undefined || result > this.statBaseValue){
+            this.statBaseValue = result;
+          }
+        }
         break;
       case 'add':
         // Add all adds together
@@ -41,6 +54,10 @@ export default class EffectAggregator{
       case 'max':
         // Take the smallest max value
         this.max = result < this.max ? result : this.max;
+        break;
+      case 'set':
+        // Take the highest set value
+        this.set = this.set === undefined || result > this.set ? result : this.set;
         break;
       case 'advantage':
         // Sum number of advantages

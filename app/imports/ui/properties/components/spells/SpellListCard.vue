@@ -1,47 +1,54 @@
 <template lang="html">
-	<toolbar-card :color="model.color" @toolbarclick="clickSpellList(model._id)" :data-id="model._id">
-		<template slot="toolbar">
-			<span>
-				{{model.name}}
-			</span>
-			<v-spacer/>
-		</template>
-		<creature-properties-tree
-			:root="{collection: 'creatureProperties', id: model._id}"
-			:filter="{type: {$in: ['spellList', 'spell', 'folder']}}"
-			@selected="e => clickProperty(e)"
-			:organize="organize"
-			group="spells"
-		/>
+  <toolbar-card
+    :color="model.color"
+    :data-id="model._id"
+    @toolbarclick="clickSpellList(model._id)"
+  >
+    <template slot="toolbar">
+      <v-toolbar-title>
+        {{ model.name }}
+      </v-toolbar-title>
+      <v-spacer />
+    </template>
+    <spell-list :spells="spells" />
   </toolbar-card>
 </template>
 
 <script>
-import CreatureProperties from '/imports/api/creature/CreatureProperties.js';
 import ToolbarCard from '/imports/ui/components/ToolbarCard.vue';
-import CreaturePropertiesTree from '/imports/ui/creature/creatureProperties/CreaturePropertiesTree.vue';
+import SpellList from '/imports/ui/properties/components/spells/SpellList.vue';
+import getActiveProperties from '/imports/api/creature/getActiveProperties.js';
 
 export default {
+	components: {
+		ToolbarCard,
+    SpellList,
+	},
 	props: {
 		model: Object,
 		organize: Boolean,
 	},
-	components: {
-		ToolbarCard,
-		CreaturePropertiesTree,
-	},
+  meteor: {
+    spells(){
+      return getActiveProperties({
+        ancestorId: this.model._id,
+        filter: {
+          type: 'spell',
+        },
+        options: {
+          sort: {
+            level: 1,
+            order: 1,
+          },
+        },
+      });
+    },
+  },
 	methods: {
 		clickSpellList(_id){
 			this.$store.commit('pushDialogStack', {
 				component: 'creature-property-dialog',
 				elementId: `${_id}`,
-				data: {_id},
-			});
-		},
-		clickProperty(_id){
-			this.$store.commit('pushDialogStack', {
-				component: 'creature-property-dialog',
-				elementId: `tree-node-${_id}`,
 				data: {_id},
 			});
 		},

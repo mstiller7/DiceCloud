@@ -1,10 +1,59 @@
 <template lang="html">
-  <div class="stats-tab ma-2">
+  <div
+    class="stats-tab ma-2"
+  >
     <div class="px-2 pt-2">
       <health-bar-card-container :creature-id="creatureId" />
     </div>
 
     <column-layout>
+      <div class="character-buttons">
+        <v-card>
+          <v-card-text class="layout column align-center">
+            <rest-button
+              :creature-id="creatureId"
+              type="shortRest"
+            />
+            <rest-button
+              :creature-id="creatureId"
+              type="longRest"
+            />
+          </v-card-text>
+        </v-card>
+      </div>
+
+      <div
+        v-if="appliedBuffs.length"
+        class="buffs"
+      >
+        <v-card>
+          <v-list>
+            <v-subheader>Buffs and conditions</v-subheader>
+            <v-list-tile
+              v-for="buff in appliedBuffs"
+              :key="buff._id"
+              :data-id="buff._id"
+              @click="clickProperty({_id: buff._id})"
+            >
+              <v-list-tile-content>
+                <v-list-tile-title>
+                  {{ buff.name }}
+                </v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                <v-btn
+                  icon
+                  flat
+                  @click.stop="softRemove(buff._id)"
+                >
+                  <v-icon>delete</v-icon>
+                </v-btn>
+              </v-list-tile-action>
+            </v-list-tile>
+          </v-list>
+        </v-card>
+      </div>
+
       <div class="ability-scores">
         <v-card>
           <v-list>
@@ -97,7 +146,7 @@
       </div>
 
       <div
-        v-if="spellSlots.length"
+        v-if="spellSlots && spellSlots.length"
         class="spell-slots"
       >
         <v-card>
@@ -113,6 +162,10 @@
             />
           </v-list>
         </v-card>
+      </div>
+
+      <div v-if="numKeys(creature.damageMultipliers)">
+        <damage-multiplier-card :model="creature.damageMultipliers" />
       </div>
 
       <div class="saving-throws">
@@ -146,12 +199,36 @@
       </div>
 
       <div
-        v-if="weapons.length || tools.length || languages.length"
-        class="proficiencies"
+        v-for="action in actions"
+        :key="action._id"
+        class="actions"
+      >
+        <action-card
+          :model="action"
+          :data-id="action._id"
+          @click="clickProperty({_id: action._id})"
+        />
+      </div>
+      <div
+        v-for="attack in attacks"
+        :key="attack._id"
+        class="attacks"
+      >
+        <action-card
+          attack
+          :model="attack"
+          :data-id="attack._id"
+          @click="clickProperty({_id: attack._id})"
+        />
+      </div>
+
+      <div
+        v-if="weapons && weapons.length"
+        class="weapon-proficiencies"
       >
         <v-card>
           <v-list>
-            <v-subheader v-if="weapons.length">
+            <v-subheader>
               Weapons
             </v-subheader>
             <skill-list-tile
@@ -162,7 +239,36 @@
               :data-id="weapon._id"
               @click="clickProperty({_id: weapon._id})"
             />
-            <v-subheader v-if="tools.length">
+          </v-list>
+        </v-card>
+      </div>
+      <div
+        v-if="armors && armors.length"
+        class="armor-proficiencies"
+      >
+        <v-card>
+          <v-list>
+            <v-subheader>
+              Armor
+            </v-subheader>
+            <skill-list-tile
+              v-for="armor in armors"
+              :key="armor._id"
+              hide-modifier
+              :model="armor"
+              :data-id="armor._id"
+              @click="clickProperty({_id: armor._id})"
+            />
+          </v-list>
+        </v-card>
+      </div>
+      <div
+        v-if="tools && tools.length"
+        class="tool-proficiencies"
+      >
+        <v-card>
+          <v-list>
+            <v-subheader>
               Tools
             </v-subheader>
             <skill-list-tile
@@ -173,7 +279,16 @@
               :data-id="tool._id"
               @click="clickProperty({_id: tool._id})"
             />
-            <v-subheader v-if="languages.length">
+          </v-list>
+        </v-card>
+      </div>
+      <div
+        v-if="languages && languages.length"
+        class="language-proficiencies"
+      >
+        <v-card>
+          <v-list>
+            <v-subheader>
               Languages
             </v-subheader>
             <skill-list-tile
@@ -187,69 +302,47 @@
           </v-list>
         </v-card>
       </div>
-
-      <div
-        v-if="actions.length"
-        class="actions"
-      >
-        <v-card>
-          <v-list
-            two-line
-            subheader
-          >
-            <v-subheader>Actions</v-subheader>
-            <action-list-tile
-              v-for="action in actions"
-              :key="action._id"
-              :model="action"
-              :data-id="action._id"
-              @click="clickProperty({_id: action._id})"
-            />
-            <v-subheader>Attacks</v-subheader>
-            <attack-list-tile
-              v-for="attack in attacks"
-              :key="attack._id"
-              :model="attack"
-              :data-id="attack._id"
-              @click="clickProperty({_id: attack._id})"
-            />
-          </v-list>
-        </v-card>
-      </div>
     </column-layout>
   </div>
 </template>
 
 <script>
-	import CreatureProperties, { damageProperty } from '/imports/api/creature/CreatureProperties.js';
+  import Creatures from '/imports/api/creature/Creatures.js';
+	import { damageProperty, softRemoveProperty } from '/imports/api/creature/CreatureProperties.js';
 	import AttributeCard from '/imports/ui/properties/components/attributes/AttributeCard.vue';
 	import AbilityListTile from '/imports/ui/properties/components/attributes/AbilityListTile.vue';
 	import ColumnLayout from '/imports/ui/components/ColumnLayout.vue';
-	import HealthBarCardContainer from '/imports/ui/properties/components/attributes/HealthBarCardContainer.vue';
+  import DamageMultiplierCard from '/imports/ui/properties/components/damageMultipliers/DamageMultiplierCard.vue';
+  import HealthBarCardContainer from '/imports/ui/properties/components/attributes/HealthBarCardContainer.vue';
 	import HitDiceListTile from '/imports/ui/properties/components/attributes/HitDiceListTile.vue';
 	import SkillListTile from '/imports/ui/properties/components/skills/SkillListTile.vue';
 	import ResourceCard from '/imports/ui/properties/components/attributes/ResourceCard.vue';
 	import SpellSlotListTile from '/imports/ui/properties/components/attributes/SpellSlotListTile.vue';
-  import ActionListTile from '/imports/ui/properties/components/actions/ActionListTile.vue';
-  import AttackListTile from '/imports/ui/properties/components/actions/AttackListTile.vue';
+  import ActionCard from '/imports/ui/properties/components/actions/ActionCard.vue';
+  import RestButton from '/imports/ui/creature/RestButton.vue';
+  import getActiveProperties from '/imports/api/creature/getActiveProperties.js';
 
-  const getProperties = function(creatureId, filter = {}){
-    filter['ancestors.id'] = creatureId;
-    filter.removed = {$ne: true};
-    return CreatureProperties.find(filter, {
-			sort: {order: 1}
-		});
+  const getProperties = function(creature, filter,){
+    if (!creature) return;
+    if (creature.settings.hideUnusedStats){
+      filter.hide = {$ne: true};
+    }
+    return getActiveProperties({
+      ancestorId: creature._id,
+      filter,
+      options: {sort: {order: 1}},
+    });
   };
 
-	const getAttributeOfType = function(creatureId, type){
-    return getProperties(creatureId, {
+	const getAttributeOfType = function(creature, type){
+    return getProperties(creature, {
       type: 'attribute',
       attributeType: type,
     });
 	};
 
-  const getSkillOfType = function(creatureId, type){
-    return getProperties(creatureId, {
+  const getSkillOfType = function(creature, type){
+    return getProperties(creature, {
       type: 'skill',
       skillType: type,
     });
@@ -257,16 +350,17 @@
 
 	export default {
 		components: {
+      RestButton,
 			AbilityListTile,
 			AttributeCard,
 			ColumnLayout,
+      DamageMultiplierCard,
 			HealthBarCardContainer,
 			HitDiceListTile,
 			SkillListTile,
 			ResourceCard,
 			SpellSlotListTile,
-      ActionListTile,
-      AttackListTile,
+      ActionCard,
 		},
 		props: {
 			creatureId: {
@@ -275,47 +369,63 @@
       },
 		},
 		meteor: {
+      creature(){
+        return Creatures.findOne(this.creatureId);
+      },
 			abilities(){
-				return getAttributeOfType(this.creatureId, 'ability');
+				return getAttributeOfType(this.creature, 'ability');
 			},
 			stats(){
-				return getAttributeOfType(this.creatureId, 'stat');
+				return getAttributeOfType(this.creature, 'stat');
 			},
 			modifiers(){
-				return getAttributeOfType(this.creatureId, 'modifier');
+				return getAttributeOfType(this.creature, 'modifier');
 			},
 			resources(){
-				return getAttributeOfType(this.creatureId, 'resource');
+				return getAttributeOfType(this.creature, 'resource');
 			},
 			spellSlots(){
-				return getAttributeOfType(this.creatureId, 'spellSlot');
+				return getAttributeOfType(this.creature, 'spellSlot');
 			},
 			hitDice(){
-        return getAttributeOfType(this.creatureId, 'hitDice');
+        return getAttributeOfType(this.creature, 'hitDice');
 			},
 			checks(){
-        return getSkillOfType(this.creatureId, 'check');
+        return getSkillOfType(this.creature, 'check');
 			},
 			savingThrows(){
-        return getSkillOfType(this.creatureId, 'save');
+        return getSkillOfType(this.creature, 'save');
 			},
 			skills(){
-        return getSkillOfType(this.creatureId, 'skill');
+        return getSkillOfType(this.creature, 'skill');
 			},
       tools(){
-        return getSkillOfType(this.creatureId, 'tool');
+        return getSkillOfType(this.creature, 'tool');
 			},
       weapons(){
-        return getSkillOfType(this.creatureId, 'weapon');
+        return getSkillOfType(this.creature, 'weapon');
+			},
+      armors(){
+        return getSkillOfType(this.creature, 'armor');
 			},
       languages(){
-        return getSkillOfType(this.creatureId, 'language');
+        return getSkillOfType(this.creature, 'language');
 			},
       actions(){
-        return getProperties(this.creatureId, {type: 'action'});
+        return getProperties(this.creature, {type: 'action'});
+			},
+      appliedBuffs(){
+        return getProperties(this.creature, {type: 'buff', applied: true});
 			},
       attacks(){
-        return getProperties(this.creatureId, {type: 'attack'});
+        let props = getProperties(this.creature, {type: 'attack'}).map(attack => {
+          attack.children = getActiveProperties({
+            ancestorId: attack._id,
+            options: {sort: {order: 1}},
+          });
+          return attack;
+        });
+        return props;
 			},
 		},
 		methods: {
@@ -331,6 +441,15 @@
 					damageProperty.call({_id, operation: 'increment' ,value: -value});
 				}
 			},
+      numKeys(obj){
+        if (!obj) return 0;
+        return Object.keys(obj).length;
+      },
+      softRemove(_id){
+        softRemoveProperty.call({_id}, error => {
+          if (error) console.error(error);
+        });
+      }
 		},
 	};
 </script>

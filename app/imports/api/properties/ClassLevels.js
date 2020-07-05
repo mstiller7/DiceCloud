@@ -9,14 +9,9 @@ let ClassLevelSchema = new SimpleSchema({
 	// The name of this class level's variable
 	variableName: {
     type: String,
+    min: 2,
 		regEx: VARIABLE_NAME_REGEX,
   },
-	// The variable name of the base class this level is attached to
-	baseClass: {
-		type: String,
-		regEx: VARIABLE_NAME_REGEX,
-		optional: true,
-	},
 	level: {
     type: SimpleSchema.Integer,
 		defaultValue: 1,

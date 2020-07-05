@@ -1,22 +1,22 @@
 <template lang="html">
   <div class="attribute-form">
     <text-field
+      ref="focusFirst"
       label="Name"
       :value="model.name"
       :error-messages="errors.name"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['name'], value, ack})"
+      @change="change('name', ...arguments)"
     />
     <div class="layout row wrap">
       <smart-select
         label="Damage Type"
         style="flex-basis: 300px;"
+        multiple
         :items="damageTypes"
-        :value="model.damageType"
-        :error-messages="errors.damageType"
+        :value="model.damageTypes"
+        :error-messages="errors.damageTypes"
         :menu-props="{auto: true, lazy: true}"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['damageType'], value, ack})"
+        @change="change('damageTypes', ...arguments)"
       />
       <smart-select
         label="Value"
@@ -25,29 +25,17 @@
         :value="model.value"
         :error-messages="errors.value"
         :menu-props="{auto: true, lazy: true}"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['value'], value, ack})"
+        @change="change('value', ...arguments)"
       />
     </div>
   </div>
 </template>
 
 <script>
+  import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
+
 	export default {
-		props: {
-			model: {
-				type: Object,
-				default: () => ({}),
-			},
-			errors: {
-				type: Object,
-				default: () => ({}),
-			},
-      debounceTime: {
-        type: Number,
-        default: undefined,
-      },
-		},
+    mixins: [propertyFormMixin],
 		data(){return {
 			damageTypes: [
         {
@@ -59,15 +47,6 @@
 				}, {
 					value: 'slashing',
 					text: 'Slashing',
-				}, {
-					value: 'magicalBludgeoning',
-					text: 'Magical Bludgeoning',
-				}, {
-					value: 'magicalPiercing',
-					text: 'Magical Piercing',
-				}, {
-					value: 'magicalSlashing',
-					text: 'Magical Slashing',
 				}, {
 					value: 'acid',
 					text: 'Acid',

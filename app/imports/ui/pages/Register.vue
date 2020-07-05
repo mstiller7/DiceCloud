@@ -1,8 +1,5 @@
 <template>
   <div>
-    <div slot="toolbar">
-      Sign Up
-    </div>
     <v-form
       ref="form"
       class="mt-4"
@@ -81,7 +78,6 @@
 </template>
 
 <script>
-  import router from '/imports/ui/router.js';
   export default{
     data() {
       return {
@@ -119,7 +115,7 @@
             if (error){
               this.error = error.reason;
             } else {
-              router.push('characterList');
+              this.$router.push(this.$route.query.redirect || 'characterList');
             }
           });
         }

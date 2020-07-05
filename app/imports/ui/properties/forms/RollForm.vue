@@ -1,81 +1,21 @@
 <template lang="html">
   <div class="roll-form">
     <text-field
+      ref="focusFirst"
       label="Roll"
       :value="model.roll"
       :error-messages="errors.roll"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['roll'], value, ack})"
+      @change="change('roll', ...arguments)"
     />
     <form-sections>
-      <form-section name="Results">
-        <v-slide-x-transition group>
-          <div
-            v-for="(rollResult, index) in model.rollResults"
-            :key="rollResult._id || index"
-          >
-            <div class="layout row align-center">
-              <text-field
-                label="Comparison"
-                style="flex-grow: 1;"
-                hint="If the comparison is true, the results below will be applied"
-                :value="rollResult.comparison"
-                :error-messages="errors.rollResults && errors.rollResults[index] && errors.rollResults[index].comparison"
-                :debounce-time="debounceTime"
-                @change="(value, ack) => $emit('change', {path: ['rollResults', index, 'comparison'], value, ack})"
-              />
-              <v-btn
-                outline
-                icon
-                large
-                class="ma-3"
-                @click="$emit('pull', {path: ['rollResults', index]})"
-              >
-                <v-icon>delete</v-icon>
-              </v-btn>
-            </div>
-            <results-form
-              :model="rollResult.results"
-              :parent-target="model.target"
-              @change="({path, value, ack}) => $emit('change', {
-                path: ['rollResults', index, 'results', ...path],
-                value,
-                ack
-              })"
-              @push="({path, value, ack}) => $emit('push', {
-                path: ['rollResults', index, 'results', ...path],
-                value,
-                ack
-              })"
-              @pull="({path, ack}) => $emit('pull', {
-                path: ['rollResults', index, 'results', ...path],
-                ack
-              })"
-            />
-            <v-divider class="my-4" />
-          </div>
-        </v-slide-x-transition>
-        <div class="layout row justify-center">
-          <v-btn
-            :loading="addResultLoading"
-            :disabled="addResultLoading"
-            outline
-            @click="addResult"
-          >
-            <v-icon>add</v-icon>
-            Add Result
-          </v-btn>
-        </div>
-      </form-section>
       <form-section name="Advanced">
-        <v-combobox
+        <smart-combobox
           label="Tags"
           multiple
           chips
           deletable-chips
-          box
           :value="model.tags"
-          @change="(value) => $emit('change', {path: ['tags'], value})"
+          @change="change('tags', ...arguments)"
         />
       </form-section>
     </form-sections>
@@ -84,46 +24,20 @@
 
 <script>
 	import FormSection, {FormSections} from '/imports/ui/properties/forms/shared/FormSection.vue';
-	import RollResultsSchema from '/imports/api/properties/subSchemas/RollResultsSchema.js';
-	import ResultsForm from '/imports/ui/properties/forms/ResultsForm.vue';
+  import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
 
 	export default {
 		components: {
 			FormSection,
 			FormSections,
-			ResultsForm,
 		},
-		props: {
-			stored: {
-				type: Boolean,
-			},
-			model: {
-				type: Object,
-				default: () => ({}),
-			},
-			errors: {
-				type: Object,
-				default: () => ({}),
-			},
-      debounceTime: {
-        type: Number,
-        default: undefined,
-      },
-		},
+    mixins: [propertyFormMixin],
 		data(){return {
 			addResultLoading: false,
 		}},
 		methods: {
 			acknowledgeAddResult(){
 				this.addResultLoading = false;
-			},
-			addResult(){
-				this.addResultLoading = true;
-				this.$emit('push', {
-					path: ['rollResults'],
-					value: RollResultsSchema.clean({}),
-					ack: this.acknowledgeAddResult,
-				});
 			},
 		},
 	};

@@ -28,7 +28,7 @@
         <template #activator="{ on }">
           <v-btn
             :loading="addResourceLoading"
-            :disabled="addResourceLoading"
+            :disabled="addResourceLoading || context.editPermission === false"
             icon
             large
             outline
@@ -53,30 +53,26 @@
 <script>
   import AttributesConsumedListForm from '/imports/ui/properties/forms/AttributesConsumedListForm.vue';
   import ItemsConsumedListForm from '/imports/ui/properties/forms/ItemsConsumedListForm.vue';
-  import ResourcesSchema from '/imports/api/properties/subSchemas/ResourcesSchema.js';
   import ItemConsumedSchema from '/imports/api/properties/subSchemas/ItemConsumedSchema.js';
   import AttributeConsumedSchema from '/imports/api/properties/subSchemas/AttributeConsumedSchema.js';
+  import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
 
   export default {
     components: {
       AttributesConsumedListForm,
       ItemsConsumedListForm,
     },
+    inject: {
+      context: { default: {} }
+    },
+    mixins: [propertyFormMixin],
     props: {
-      model: {
-        type: Object,
-        default: () => (ResourcesSchema.clean({})),
-      },
       parentTarget: {
         type: String,
         default: undefined,
       },
       buffsStored: {
         type: Boolean,
-      },
-      debounceTime: {
-        type: Number,
-        default: undefined,
       },
     },
     data(){return {

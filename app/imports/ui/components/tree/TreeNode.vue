@@ -1,61 +1,73 @@
 <template lang="html">
-	<v-sheet
-		class="tree-node"
-		:class="!hasChildren ? 'empty' : null"
-		:data-id="`tree-node-${node._id}`"
-	>
-		<div
-			class="layout row align-center justify-start tree-node-title"
-			style="cursor: pointer;"
-			:class="selected && 'primary--text'"
-			@click.stop="$emit('selected', node._id)"
-		>
-			<v-btn
-				small icon
-				:class="showExpanded ? 'rotate-90' : null"
-				@click.stop="expanded = !expanded"
-				:disabled="!hasChildren && !organize || !canExpand"
-			>
-				<v-icon v-if="canExpand && (hasChildren || organize)">chevron_right</v-icon>
-			</v-btn>
-			<div
-				class="layout row align-center justify-start"
-				style="flex-grow: 0;"
-			>
-				<v-icon
-					class="handle mr-2"
-					v-if="organize"
-					:class="selected && 'primary--text'"
-					:disabled="expanded"
-				>drag_handle</v-icon>
-				<property-icon
-					v-if="node.type"
-					class="mr-2"
-					:type="node.type"
-					:class="selected && 'primary--text'"
-				/>
-				<div class="text-no-wrap text-truncate">
-					<!--{{node && node.order}}-->
-					{{getTitle}}
-				</div>
-			</div>
-		</div>
-		<v-expand-transition>
-			<div v-if="showExpanded" class="pl-3">
-				<tree-node-list
-					v-if="showExpanded"
-					:node="node"
-					:children="computedChildren"
-					:group="group"
-					:organize="organize"
-					:selected-node-id="selectedNodeId"
-					@reordered="e => $emit('reordered', e)"
-					@reorganized="e => $emit('reorganized', e)"
-					@selected="e => $emit('selected', e)"
-				/>
-			</div>
-		</v-expand-transition>
-	</v-sheet>
+  <v-sheet
+    class="tree-node"
+    :class="!hasChildren ? 'empty' : null"
+    :data-id="`tree-node-${node._id}`"
+  >
+    <div
+      class="layout row align-center justify-start tree-node-title"
+      style="cursor: pointer;"
+      :class="selected && 'primary--text'"
+      @click.stop="$emit('selected', node._id)"
+    >
+      <v-btn
+        small
+        icon
+        :class="showExpanded ? 'rotate-90' : null"
+        :disabled="!hasChildren && !organize || !canExpand"
+        @click.stop="expanded = !expanded"
+      >
+        <v-icon v-if="canExpand && (hasChildren || organize)">
+          chevron_right
+        </v-icon>
+      </v-btn>
+      <div
+        class="layout row align-center justify-start pr-1"
+        style="flex-grow: 0;"
+      >
+        <v-icon
+          v-if="organize"
+          class="handle mr-2"
+          :class="selected && 'primary--text'"
+          :disabled="expanded"
+        >
+          drag_handle
+        </v-icon>
+        <!--{{node && node.order}}-->
+        <tree-node-view
+          :model="node"
+          :selected="selected"
+        />
+      </div>
+    </div>
+    <v-expand-transition>
+      <div
+        v-show="showExpanded"
+        class="pl-3"
+      >
+        <v-fade-transition hide-on-leave>
+          <tree-node-list
+            v-if="showExpanded"
+            :node="node"
+            :children="computedChildren"
+            :group="group"
+            :organize="organize"
+            :selected-node-id="selectedNodeId"
+            @reordered="e => $emit('reordered', e)"
+            @reorganized="e => $emit('reorganized', e)"
+            @selected="e => $emit('selected', e)"
+          />
+          <div v-else>
+            <div
+              v-for="i in children.length"
+              :key="i"
+              class="dummy-node"
+            />
+          </div>
+        </v-fade-transition>
+      </div>
+    </v-expand-transition>
+  </v-sheet>
 </template>
 
 <script>
@@ -65,21 +77,15 @@
 	* the tree view shows off the full character structure, and where each part of
 	* character comes from.
 	**/
-	import PropertyIcon from '/imports/ui/properties/shared/PropertyIcon.vue';
 	import { canBeParent } from '/imports/api/parenting/parenting.js';
-	import PROPERTIES from '/imports/constants/PROPERTIES.js'
+	import { getPropertyIcon } from '/imports/constants/PROPERTIES.js';
+  import TreeNodeView from '/imports/ui/properties/treeNodeViews/TreeNodeView.vue';
 
 	export default {
-		name: 'tree-node',
-		beforeCreate() {
-		  this.$options.components.TreeNodeList = require('./TreeNodeList.vue').default
-		},
-		components: {
-			PropertyIcon,
-		},
-		data(){ return {
-			expanded: false,
-		}},
+		name: 'TreeNode',
+    components: {
+      TreeNodeView,
+    },
 		props: {
 			node: Object,
 			group: String,
@@ -89,6 +95,9 @@
 			selectedNodeId: String,
 			selected: Boolean,
 		},
+		data(){ return {
+			expanded: false,
+		}},
 		computed: {
 			hasChildren(){
 				return this.children && this.children.length || this.lazy && !this.expanded;
@@ -109,17 +118,13 @@
 			canExpand(){
 				return canBeParent(this.node.type);
 			},
-			getTitle(){
-				let node = this.node;
-				if (!node) return;
-				if (node.name) return node.name;
-				let prop = PROPERTIES[this.node.type]
-				return prop && prop.name;
-			}
+		},
+		beforeCreate() {
+      this.$options.components.TreeNodeList = require('./TreeNodeList.vue').default
 		},
 		methods: {
 			icon(type){
-				return PROPERTY_ICONS[type];
+				return getPropertyIcon(type);
 			},
 		}
 	};
@@ -144,13 +149,19 @@
 		opacity: 0.4;
 	}
 	.ghost {
-	  opacity: 0.5;
-	  background: #c8ebfb;
+    opacity: 0.5;
+    background: #fbc8c8;
 	}
 	.v-icon.v-icon--disabled {
 		opacity: 0;
 	}
+  .v-icon {
+    transition: none !important;
+  }
 	.theme--light .tree-node-title:hover {
 		background: rgba(0,0,0,.04);
 	}
+  .dummy-node {
+    height: 40px;
+  }
 </style>

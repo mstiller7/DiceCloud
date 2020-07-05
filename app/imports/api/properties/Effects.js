@@ -1,6 +1,5 @@
 import SimpleSchema from 'simpl-schema';
-import { Random } from 'meteor/random';
-
+import ErrorSchema from '/imports/api/properties/subSchemas/ErrorSchema.js';
 /*
  * Effects are reason-value attached to skills and abilities
  * that modify their final value or presentation in some way
@@ -19,6 +18,7 @@ let EffectSchema = new SimpleSchema({
 			'mul',
 			'min',
 			'max',
+      'set',
 			'advantage',
 			'disadvantage',
 			'passiveAdd',
@@ -38,19 +38,8 @@ let EffectSchema = new SimpleSchema({
 	},
 	'stats.$': {
 		type: String,
-		optional: true,
 	},
 });
-
-const StoredEffectSchema = new SimpleSchema({
-		_id: {
-			type: String,
-			regEx: SimpleSchema.RegEx.Id,
-			autoValue(){
-				if (!this.isSet) return Random.id();
-			}
-		},
-}).extend(EffectSchema);
 
 const ComputedOnlyEffectSchema = new SimpleSchema({
 	// The computed result of the effect
@@ -58,10 +47,18 @@ const ComputedOnlyEffectSchema = new SimpleSchema({
 		type: SimpleSchema.oneOf(Number, String, Boolean),
 		optional: true,
 	},
-})
+  // The errors encountered while computing the result
+  errors: {
+    type: Array,
+    optional: true,
+  },
+  'errors.$':{
+    type: ErrorSchema,
+  },
+});
 
 const ComputedEffectSchema = new SimpleSchema()
 	.extend(ComputedOnlyEffectSchema)
 	.extend(EffectSchema);
 
-export { EffectSchema, StoredEffectSchema, ComputedEffectSchema, ComputedOnlyEffectSchema };
+export { EffectSchema, ComputedEffectSchema, ComputedOnlyEffectSchema };

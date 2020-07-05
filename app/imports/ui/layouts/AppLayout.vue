@@ -4,14 +4,17 @@
     :light="!darkMode"
   >
     <v-navigation-drawer
-      v-if="$route.path !== '/countdown'"
       v-model="drawer"
       app
     >
       <Sidebar />
     </v-navigation-drawer>
+    <router-view
+      v-model="tabs"
+      name="toolbar"
+    />
     <v-toolbar
-      v-if="$route.path !== '/countdown'"
+      v-if="!$route.matched[0].components.toolbar"
       app
       color="secondary"
       dark
@@ -54,20 +57,10 @@
       </v-fade-transition>
     </v-toolbar>
     <v-content>
-      <v-alert
-        v-if="$route.path !== '/countdown'"
-        icon="priority_high"
-        type="error"
-        dismissible
-        :value="true"
-      >
-        This version of DiceCloud is in beta. Some data stored here may be destroyed by
-        future updates.
-      </v-alert>
       <v-fade-transition
         mode="out-in"
       >
-        <router-view :tabs="tabs" />
+        <router-view :tabs.sync="tabs" />
       </v-fade-transition>
     </v-content>
 

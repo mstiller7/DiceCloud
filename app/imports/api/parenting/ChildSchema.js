@@ -14,7 +14,6 @@ const RefSchema = new SimpleSchema({
 let ChildSchema = new SimpleSchema({
   order: {
     type: Number,
-    min: 0,
   },
 	parent: {
     type: RefSchema,
@@ -23,6 +22,7 @@ let ChildSchema = new SimpleSchema({
   ancestors: {
     type: Array,
     defaultValue: [],
+    max: 100,
   },
   'ancestors.$': {
     type: RefSchema,

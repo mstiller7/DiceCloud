@@ -1,4 +1,5 @@
 import SimpleSchema from 'simpl-schema';
+import ErrorSchema from '/imports/api/properties/subSchemas/ErrorSchema.js';
 import VARIABLE_NAME_REGEX from '/imports/constants/VARIABLE_NAME_REGEX.js';
 
 /*
@@ -13,7 +14,7 @@ let AttributeSchema = new SimpleSchema({
   variableName: {
     type: String,
 		regEx: VARIABLE_NAME_REGEX,
-    min: 3,
+    min: 2,
     defaultValue: 'newAttribute',
   },
 	// How it is displayed and computed is determined by type
@@ -38,6 +39,11 @@ let AttributeSchema = new SimpleSchema({
     type: String,
     allowedValues: ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'],
     optional: true,
+  },
+  // For type spellSlot, the level needs to be stored separately
+  spellSlotLevelCalculation: {
+    type: String,
+		optional: true,
   },
 	// The starting value, before effects
 	baseValueCalculation: {
@@ -74,8 +80,33 @@ let ComputedOnlyAttributeSchema = new SimpleSchema({
     type: SimpleSchema.oneOf(Number, String, Boolean),
     optional: true,
   },
+  baseValueErrors: {
+    type: Array,
+    optional: true,
+  },
+  'baseValueErrors.$': {
+    type: ErrorSchema,
+  },
+  // The result of spellSlotLevelCalculation
+  spellSlotLevelValue: {
+    type: SimpleSchema.oneOf(Number, String, Boolean),
+    optional: true,
+  },
+  spellSlotLevelErrors: {
+    type: Array,
+    optional: true,
+  },
+  'spellSlotLevelErrors.$': {
+    type: ErrorSchema,
+  },
 	// The computed value of the attribute
   value: {
+    type: SimpleSchema.oneOf(Number, String, Boolean),
+		defaultValue: 0,
+    optional: true,
+  },
+  // The computed value of the attribute minus the damage
+  currentValue: {
     type: SimpleSchema.oneOf(Number, String, Boolean),
 		defaultValue: 0,
     optional: true,
@@ -85,6 +116,11 @@ let ComputedOnlyAttributeSchema = new SimpleSchema({
 		type: SimpleSchema.Integer,
 		optional: true,
 	},
+  // Should this attribute hide
+  hide: {
+    type: Boolean,
+    optional: true,
+  },
 });
 
 const ComputedAttributeSchema = new SimpleSchema()

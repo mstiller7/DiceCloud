@@ -1,88 +1,80 @@
 <template lang="html">
-	<div class="spells">
-		<column-layout>
-			<v-card>
-				<v-switch
-					v-model="organize"
-					label="Organize"
-					class="justify-end"
-					style="margin: 16px 24px -16px;"
-				/>
-				<!-- Equipping things isn't implemented yet
-				<creature-properties-tree
-					:root="{collection: 'creatures', id: creatureId}"
-					:filter="{
-						equipped: true,
-						type: 'spell',
-						'ancestors.id': {$nin: spellListIds}
-					}"
-					@selected="e => clickProperty(e)"
-					:organize="organize"
-					group="spells"
-				/>
-				<v-divider/>
-				-->
-				<creature-properties-tree
-					:root="{collection: 'creatures', id: creatureId}"
-					:filter="{
-						equipped: {$ne: true},
-						type: 'spell',
-						'ancestors.id': {$nin: spellListIds}
-					}"
-					@selected="e => clickProperty(e)"
-					:organize="organize"
-					group="spells"
-				/>
-			</v-card>
-			<div v-for="spellList in spellListsWithoutAncestorSpellLists" :key="spellList._id">
-				<spellList-card
-					:model="spellList"
-					:organize="organize"
-				/>
-			</div>
-		</column-layout>
-	</div>
+  <div class="spells">
+    <column-layout wide-columns>
+      <div v-if="spellsWithoutList.length">
+        <v-card>
+          <spell-list :spells="spellsWithoutList" />
+        </v-card>
+      </div>
+      <div
+        v-for="spellList in spellListsWithoutAncestorSpellLists"
+        :key="spellList._id"
+      >
+        <spellList-card
+          :model="spellList"
+          :organize="organize"
+        />
+      </div>
+    </column-layout>
+  </div>
 </template>
 
 <script>
-import CreatureProperties from '/imports/api/creature/CreatureProperties.js';
 import ColumnLayout from '/imports/ui/components/ColumnLayout.vue';
-import CreaturePropertiesTree from '/imports/ui/creature/creatureProperties/CreaturePropertiesTree.vue';
+import getActiveProperties from '/imports/api/creature/getActiveProperties.js';
 import SpellListCard from '/imports/ui/properties/components/spells/SpellListCard.vue';
+import SpellList from '/imports/ui/properties/components/spells/SpellList.vue';
 
 export default {
+	components: {
+		ColumnLayout,
+    SpellList,
+		SpellListCard,
+	},
+  inject: {
+    context: { default: {} }
+  },
 	props: {
-		creatureId: String,
+		creatureId: {
+      type: String,
+      required: true,
+    }
 	},
 	data(){ return {
 		organize: false,
 	}},
-	components: {
-		ColumnLayout,
-		CreaturePropertiesTree,
-		SpellListCard,
-	},
 	meteor: {
 		spellLists(){
-			return CreatureProperties.find({
-				'ancestors.id': this.creatureId,
-				type: 'spellList',
-				removed: {$ne: true},
-			}, {
-				sort: {order: 1},
-			});
+      return getActiveProperties({
+        ancestorId: this.creatureId,
+        filter: {
+          type: 'spellList',
+        },
+      });
 		},
+    spellsWithoutList(){
+      return getActiveProperties({
+        ancestorId: this.creatureId,
+        excludeAncestors: this.spellListIds,
+        filter: {
+          type: 'spell',
+        },
+        options: {
+          sort: {
+            level: 1,
+            order: 1,
+          },
+        },
+      });
+    },
 		spellListsWithoutAncestorSpellLists(){
-			return CreatureProperties.find({
-				'ancestors.id': {
-					$eq: this.creatureId,
-					$nin: this.spellListIds
-				},
-				type: 'spellList',
-				removed: {$ne: true},
-			}, {
-				sort: {order: 1},
-			});
+      return getActiveProperties({
+        ancestorId: this.creatureId,
+        excludeAncestors: this.spellListIds,
+        filter: {
+          type: 'spellList',
+        },
+      });
 		},
 	},
 	computed: {
@@ -94,7 +86,7 @@ export default {
 		clickProperty(_id){
 			this.$store.commit('pushDialogStack', {
 				component: 'creature-property-dialog',
-				elementId: `tree-node-${_id}`,
+				elementId: `spell-list-tile-${_id}`,
 				data: {_id},
 			});
 		},

@@ -48,38 +48,38 @@ export function fetchParent({id, collection}){
 }
 
 export function fetchChildren({ collection, parentId, filter = {}, options = {sort: {order: 1}} }){
-  filter["parent.id"] = parentId;
+  filter['parent.id'] = parentId;
   let children = [];
   children.push(
     ...collection.find({
-      "parent.id": parentId
+      'parent.id': parentId
     }, options).fetch()
   );
   return children;
 }
 
 export function updateChildren({collection, parentId, filter = {}, modifier, options={}}){
-  filter["parent.id"] = parentId;
+  filter['parent.id'] = parentId;
   options.multi = true;
   collection.update(filter, modifier, options);
 }
 
 export function fetchDescendants({ collection, ancestorId, filter = {}, options}){
-  filter["ancestors.id"] = ancestorId;
+  filter['ancestors.id'] = ancestorId;
   let descendants = [];
   descendants.push(...collection.find(filter, options).fetch());
   return descendants;
 }
 
 export function updateDescendants({collection, ancestorId, filter = {}, modifier, options={}}){
-  filter["ancestors.id"] = ancestorId;
+  filter['ancestors.id'] = ancestorId;
   options.multi = true;
   options.selector = {type: 'any'};
   collection.update(filter, modifier, options);
 }
 
 export function forEachDescendant({collection, ancestorId, filter = {}, options}, callback){
-  filter["ancestors.id"] = ancestorId;
+  filter['ancestors.id'] = ancestorId;
   collection.find(filter, options).forEach(callback);
 }
 
@@ -130,7 +130,7 @@ export function renewDocIds({docArray, collectionMap}){
   const remapReference = ref => {
     if (idMap[ref.id]){
       ref.id = idMap[ref.id];
-      ref.collection = collectionMap[ref.collection] || ref.collection;
+      ref.collection = collectionMap && collectionMap[ref.collection] || ref.collection;
     }
   }
   docArray.forEach(doc => {
@@ -200,21 +200,15 @@ export function getName(doc){
   if (doc.name) return name;
   var i = doc.ancestors.length;
   while(i--) {
-    if (ancestors[i].name) return ancestors[i].name;
+    if (doc.ancestors[i].name) return doc.ancestors[i].name;
   }
 }
 
-export function nodesToTree({collection, ancestorId, filter}){
+export function nodeArrayToTree(nodes){
   // Store a dict of all the nodes
   let nodeIndex = {};
   let nodeList = [];
-  collection.find({
-    'ancestors.id': ancestorId,
-		removed: {$ne: true},
-    ...filter,
-  }, {
-    sort: {order: 1}
-  }).forEach( node => {
+  nodes.forEach( node => {
     let treeNode = {
       node: node,
       children: [],
@@ -237,4 +231,15 @@ export function nodesToTree({collection, ancestorId, filter}){
     }
   });
   return forest;
+}
+
+export function nodesToTree({collection, ancestorId, filter, options}){
+  if (!options) options = {};
+  options.sort = {order: 1};
+  let nodes = collection.find({
+    'ancestors.id': ancestorId,
+		removed: {$ne: true},
+    ...filter,
+  }, options);
+  return nodeArrayToTree(nodes);
 }

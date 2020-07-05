@@ -1,8 +1,13 @@
 <template>
-  <v-btn fab small @click="$emit('click')">
-    <v-icon>{{icon}}</v-icon>
+  <v-btn
+    fab
+    small
+    v-bind="$attrs"
+    @click="$emit('click')"
+  >
+    <v-icon>{{ icon }}</v-icon>
     <span id="label">
-      {{label}}
+      {{ label }}
     </span>
   </v-btn>
 </template>
@@ -13,7 +18,7 @@
    * component creates a v-btn with a label.
    */
   export default {
-    props: ["icon", "label"],
+    props: ['icon', 'label'],
   }
 </script>
 

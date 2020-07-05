@@ -1,5 +1,5 @@
 <template lang="html">
-  <div>
+  <div class="adjustment-form">
     <div class="layout row">
       <smart-combobox
         label="Attribute"
@@ -8,17 +8,15 @@
         :items="attributeList"
         :value="model.stat"
         :error-messages="errors.stat"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['stat'], value, ack})"
+        @change="change('stat', ...arguments)"
       />
       <text-field
-        label="Adjustment"
+        label="Damage"
         hint="The amount of damage to apply to the selected stat, can be a calculation or roll"
         style="flex-basis: 300px;"
-        :value="model.adjustment"
-        :error-messages="errors.adjustment"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['adjustment'], value, ack})"
+        :value="model.amount"
+        :error-messages="errors.amount"
+        @change="change('amount', ...arguments)"
       />
     </div>
     <smart-select
@@ -29,34 +27,22 @@
       :value="model.target"
       :error-messages="errors.target"
       :menu-props="{auto: true, lazy: true}"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['target'], value, ack})"
+      @change="change('target', ...arguments)"
     />
   </div>
 </template>
 
 <script>
 import attributeListMixin from '/imports/ui/properties/forms/shared/lists/attributeListMixin.js';
+import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
 
 export default {
-  mixins: [attributeListMixin],
+  mixins: [propertyFormMixin, attributeListMixin],
 	props: {
-		model: {
-			type: Object,
-			default: () => ({}),
-		},
-		errors: {
-			type: Object,
-			default: () => ({}),
-		},
 		parentTarget: {
 			type: String,
       default: undefined,
 		},
-    debounceTime: {
-      type: Number,
-      default: undefined,
-    },
 	},
 	computed: {
 		targetOptions(){

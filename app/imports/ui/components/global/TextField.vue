@@ -1,20 +1,22 @@
 <template lang="html">
   <v-text-field
-		v-bind="$attrs"
-		:loading="loading"
-		:error-messages="errors"
-		:value="safeValue"
-		@input="input"
-		@focus="focused = true"
-		@blur="focused = false"
-		box
-	/>
+    ref="input"
+    v-bind="$attrs"
+    :loading="loading"
+    :error-messages="errors"
+    :value="safeValue"
+    :disabled="isDisabled"
+    box
+    @input="input"
+    @focus="focused = true"
+    @blur="focused = false"
+  />
 </template>
 
 <script>
-	import SmartInput from '/imports/ui/components/global/SmartInputMixin.js';
+  import SmartInput from '/imports/ui/components/global/SmartInputMixin.js';
 
-	export default {
-		mixins: [SmartInput],
-	};
+  export default {
+    mixins: [SmartInput],
+  };
 </script>

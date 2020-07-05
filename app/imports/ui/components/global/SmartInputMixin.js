@@ -9,6 +9,9 @@
 import { debounce } from 'lodash';
 
 export default {
+  inject: {
+    context: { default: {} }
+  },
   inheritAttrs: false,
   data(){ return {
     error: false,
@@ -20,12 +23,9 @@ export default {
     inputValue: this.value,
   };},
   props: {
-    value: [String, Number, Date, Array],
-    debounceTime: {
-      type: Number,
-      default: 750,
-    },
+    value: [String, Number, Date, Array, Object, Boolean],
     errorMessages: [String, Array],
+    disabled: Boolean,
   },
   watch: {
     focused(newFocus){
@@ -54,7 +54,7 @@ export default {
         this.safeValue = newValue;
       }
     },
-    safeValue(newSafeValue){
+    safeValue(){
       // The safe value only gets updated from the parent, so it must be valid
       this.error = false;
       this.ackErrors = null;
@@ -75,7 +75,9 @@ export default {
 				this.ackErrors = null;
 			} else if (typeof error === 'string'){
 				this.ackErrors = error;
-			} else {
+			} else if (error.reason){
+        this.ackErrors = error.reason;
+      } else {
 				this.ackErrors = 'Something went wrong'
 				console.error(error);
 			}
@@ -93,6 +95,9 @@ export default {
       this.safeValue = null;
       this.$nextTick(() => this.safeValue = this.value);
     },
+    focus(){
+      this.$refs.input.focus();
+    }
   },
   computed: {
     errors(){
@@ -103,6 +108,16 @@ export default {
         errors.push(this.errorMessages);
       }
       return errors;
+    },
+    isDisabled(){
+      return this.context.editPermission === false || this.disabled;
+    },
+    debounceTime() {
+      if (Number.isFinite(this.context.debounceTime)){
+        return this.context.debounceTime;
+      } else {
+        return 750;
+      }
     },
   },
   created(){

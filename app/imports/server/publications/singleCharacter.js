@@ -1,51 +1,33 @@
+import SimpleSchema from 'simpl-schema';
 import Creatures from '/imports/api/creature/Creatures.js';
 import CreatureProperties from '/imports/api/creature/CreatureProperties.js';
 
-Meteor.publish('singleCharacter', function(charId){
-	userId = this.userId;
-	var char = Creatures.findOne({
-		_id: charId,
-		$or: [
-			{readers: userId},
-			{writers: userId},
-			{owner: userId},
-			{'settings.viewPermission': 'public'},
-		],
-	});
-	if (char){
-		return [
-			Creatures.find({_id: charId}),
-			CreatureProperties.find({
-				'ancestors.id': charId,
-			}),
-		];
-	} else {
-		return [];
-	}
+let schema = new SimpleSchema({
+  creatureId: {
+    type: String,
+    regEx: SimpleSchema.RegEx.Id,
+  },
 });
 
-DDPRateLimiter.addRule({
-	name: 'singleCharacter',
-	type: 'subscription',
-	userId: null,
-	connectionId(){ return true; },
-}, 8, 10000, function(reply, ruleInput){
-	if(!reply.allowed){
-		logRateError(reply, ruleInput);
-	}
-});
-
-Meteor.publish('singleCharacterName', function(charId){
-	userId = this.userId;
-	return Creatures.find({
-		_id: charId,
-		$or: [
-			{readers: userId},
-			{writers: userId},
-			{owner: userId},
-			{'settings.viewPermission': 'public'},
-		],
-	}, {
-		fields:{'name': 1}
-	});
+Meteor.publish('singleCharacter', function(creatureId){
+  schema.validate({ creatureId });
+  this.autorun(function (){
+    let userId = this.userId;
+    let creatureCursor = Creatures.find({
+      _id: creatureId,
+      $or: [
+        {readers: userId},
+        {writers: userId},
+        {owner: userId},
+        {public: true},
+      ],
+    });
+    if (!creatureCursor.count()) return this.ready();
+    return [
+      creatureCursor,
+      CreatureProperties.find({
+        'ancestors.id': creatureId,
+      }),
+    ];
+  });
 });

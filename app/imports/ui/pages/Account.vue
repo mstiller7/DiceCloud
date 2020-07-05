@@ -6,17 +6,28 @@
     >
       <v-list>
         <v-list-tile>
-          <v-switch
-            :input-value="darkMode"
+          <smart-switch
+            :value="darkMode"
             label="Dark mode"
             @change="setDarkMode"
+          />
+        </v-list-tile>
+        <v-list-tile>
+          <smart-switch
+            label="Swap ability scores and modifiers"
+            :value="
+              user &&
+                user.preferences &&
+                user.preferences.swapAbilityScoresAndModifiers
+            "
+            @change="swapAbilityScoresAndModifiers"
           />
         </v-list-tile>
 
         <v-subheader>
           Username
         </v-subheader>
-        <v-list-tile>
+        <v-list-tile data-id="username">
           <v-list-tile-action>
             <v-tooltip right>
               <span>Change Username</span>
@@ -24,6 +35,7 @@
                 slot="activator"
                 icon
                 flat
+                @click="changeUsername"
               >
                 <v-icon>create</v-icon>
               </v-btn>
@@ -48,39 +60,70 @@
         <v-subheader>
           Patreon
         </v-subheader>
-        <template v-if="user.services.patreon">
-          <v-list-tile>
-            <v-list-tile-title>
-              Pledged amount: ${{ entitledCents/100 }}
-            </v-list-tile-title>
-            <v-list-tile-action>
-              <v-btn icon>
-                <v-icon>refresh</v-icon>
-              </v-btn>
-            </v-list-tile-action>
-          </v-list-tile>
-          <v-list-tile>
-            <v-list-tile-title>
-              Tier: {{ tier.name }}
-            </v-list-tile-title>
-          </v-list-tile>
-        </template>
-        <v-list-tile v-else>
-          <v-btn @click="linkWithPatreon">
-            Link Patreon
+        <v-list-tile>
+          <v-list-tile-title>
+            Tier: {{ tier.name }}
+          </v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="!user.services.google">
+          <v-btn
+            color="primary"
+            @click="linkWithGoogle"
+          >
+            Link Google Account
+          </v-btn>
+        </v-list-tile>
+        <v-list-tile v-if="!user.services.patreon">
+          <v-btn
+            color="primary"
+            @click="linkWithPatreon"
+          >
+            Link Patreon Account
           </v-btn>
         </v-list-tile>
       </v-list>
-      <v-card-actions>
-        <v-spacer />
+      <v-layout
+        row
+        justify-end
+      >
         <v-btn
-          flat
           color="accent"
           @click="signOut"
         >
           Sign Out
         </v-btn>
-      </v-card-actions>
+      </v-layout>
+      <template v-if="invites.length">
+        <v-divider class="mt-3 mb-3" />
+        <v-subheader>
+          <h1>
+            Invites
+          </h1>
+        </v-subheader>
+        <v-list>
+          <template
+            v-for="(invite, index) in invites"
+          >
+            <v-list-tile
+              :key="invite._id"
+              :data-id="invite._id"
+              @click="clickInvite(invite)"
+            >
+              <v-list-tile-content>
+                <v-list-tile-title>
+                  {{ invite.inviteeName || invite.invitee || 'Available' }}
+                </v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                <v-icon>mail_outline</v-icon>
+              </v-list-tile-action>
+            </v-list-tile>
+            <v-divider
+              :key="index"
+            />
+          </template>
+        </v-list>
+      </template>
     </v-card>
   </div>
 </template>
@@ -95,7 +138,10 @@
   export default {
     meteor: {
       $subscribe: {
-        'user': [],
+        'userPublicProfiles'(){
+          if (!this.invites) return false;
+          return [this.invites.map(i => i.invitee).filter(i => !!i)];
+        },
       },
       user(){
         return Meteor.user();
@@ -108,9 +154,23 @@
         const user = Meteor.user();
         return user && user.emails;
       },
-			darkMode(){
-				return this.user && this.user.darkMode;
-			},
+      darkMode(){
+        return this.user && this.user.darkMode;
+      },
+      invites(){
+        let usernames = {};
+        Meteor.users.find({}).forEach(user => {
+          usernames[user._id] = user.username;
+        });
+        return Invites.find({
+          inviter: Meteor.userId(),
+        }, {
+          sort: {dateConfirmed: 1, invitee: -1},
+        }).map(invite => {
+          invite.inviteeName = usernames[invite.invitee];
+          return invite;
+        });
+      },
     },
     data(){ return {
       showApiKey: false,
@@ -127,13 +187,25 @@
       },
     },
     methods: {
+      changeUsername(){
+        this.$store.commit('pushDialogStack', {
+          component: 'username-dialog',
+          elementId: 'username',
+        });
+      },
       signOut(){
         Meteor.logout();
         router.push('/');
       },
-			setDarkMode(value){
-				Meteor.users.setDarkMode.call({darkMode: !!value});
-			},
+      setDarkMode(value, ack){
+        Meteor.users.setDarkMode.call({darkMode: !!value}, ack);
+      },
+      swapAbilityScoresAndModifiers(value, ack){
+        Meteor.users.setPreference.call({
+          preference: 'swapAbilityScoresAndModifiers',
+          value: !!value,
+        }, ack);
+      },
       generateKey(){
         Meteor.users.gnerateApiKey.call(error => {
           if(error) this.apiKeyGenerationError = error.reason;
@@ -143,6 +215,18 @@
       verifyEmail(address){
         Meteor.users.sendVerificationEmail.call({address}, error => {
           if(error) this.emailVerificationError = error.reason;
+        });
+      },
+      clickInvite(invite){
+        this.$store.commit('pushDialogStack', {
+          component: 'invite-dialog',
+          elementId: invite._id,
+          data: {inviteId: invite._id},
+        });
+      },
+      linkWithGoogle(){
+        Meteor.linkWithGoogle(error => {
+          if (error) console.error(error);
         });
       },
       linkWithPatreon,

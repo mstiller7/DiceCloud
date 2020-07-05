@@ -1,5 +1,6 @@
 import SimpleSchema from 'simpl-schema';
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
+import { RateLimiterMixin } from 'ddp-rate-limiter-mixin';
 import { getUserTier } from '/imports/api/users/patreon/tiers.js';
 
 let Invites= new Mongo.Collection('invites');
@@ -15,6 +16,7 @@ let InviteSchema = new SimpleSchema({
     regEx: SimpleSchema.RegEx.Id,
     optional: true,
     index: 1,
+    unique: 1,
   },
   inviteToken: {
     type: String,
@@ -24,10 +26,6 @@ let InviteSchema = new SimpleSchema({
   },
   isFunded: {
     type: Boolean,
-  },
-  isRedundant: {
-    type: Boolean,
-    optional: true,
   },
   // The timestamp of when the invitee was confirmed
   // Older invites have priority over newer ones
@@ -88,13 +86,18 @@ function alignInvitesWithPatreonTier(user){
 }
 
 const getInviteToken = new ValidatedMethod({
-  name: 'Invites.methods.getToken',
+  name: 'invites.getToken',
   validate: new SimpleSchema({
     inviteId: {
       type: String,
       regEx: SimpleSchema.RegEx.Id,
     },
   }).validator(),
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
   run({inviteId}) {
     let invite = Invites.findOne(inviteId);
     if (this.userId !== invite.inviter) {
@@ -112,21 +115,27 @@ const getInviteToken = new ValidatedMethod({
 });
 
 const acceptInviteToken = new ValidatedMethod({
-  name: 'Invites.methods.acceptToken',
+  name: 'invites.acceptToken',
   validate: new SimpleSchema({
     inviteToken: {
       type: String,
     },
   }).validator(),
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
   run({inviteToken}) {
-    if (this.userId) {
+    if (!this.userId) {
       throw new Meteor.Error('Invites.methods.acceptToken.denied',
       'You need to be the logged in to accept a token');
     }
+    if (Meteor.isClient) return;
     let invite = Invites.findOne({inviteToken});
     if (!invite){
       throw new Meteor.Error('Invites.methods.acceptToken.notFound',
-      'No invite could be found for this token');
+      'No invite could be found for this link, maybe it has already been claimed');
     }
     // If the invitee is already filled, fix unexpected case by deleting the token
     if (invite.invitee){
@@ -134,7 +143,7 @@ const acceptInviteToken = new ValidatedMethod({
         $unset: {inviteToken: 1}
       });
       throw new Meteor.Error('Invites.methods.acceptToken.alreadyAccepted',
-      'This invite already has an invitee, and shouldn\'t have a token');
+      'This invite has already been claimed');
     }
     if (this.userId === invite.inviter){
       throw new Meteor.Error('Invites.methods.acceptToken.ownToken',
@@ -147,7 +156,46 @@ const acceptInviteToken = new ValidatedMethod({
   },
 });
 
+const revokeInvite = new ValidatedMethod({
+  name: 'invites.revokeInvite',
+  validate: new SimpleSchema({
+    inviteId: {
+      type: String,
+      regEx: SimpleSchema.RegEx.Id,
+    },
+  }).validator(),
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
+  run({inviteId}) {
+    if (!this.userId) {
+      throw new Meteor.Error('Invites.methods.revokeInvite.denied',
+      'You need to be the logged in to revoke a token');
+    }
+    if (Meteor.isClient) return;
+    let invite = Invites.findOne(inviteId);
+    if (!invite){
+      throw new Meteor.Error('Invites.methods.revokeInvite.notFound',
+      'No invite could be found for this id');
+    }
+    if (this.userId !== invite.inviter) {
+      throw new Meteor.Error('Invites.methods.revokeInvite.denied',
+      'You are not the owner of this invite');
+    }
+
+    // If the invitee is empty, the token has already been revoked
+    if (!invite.invitee){
+      return;
+    }
+    Invites.update(invite._id, {
+      $unset: {invitee: 1, dateConfirmed: 1},
+    });
+  },
+});
+
 Invites.attachSchema(InviteSchema);
 
 export default Invites;
-export { alignInvitesWithPatreonTier, getInviteToken, acceptInviteToken };
+export { alignInvitesWithPatreonTier, getInviteToken, acceptInviteToken, revokeInvite };

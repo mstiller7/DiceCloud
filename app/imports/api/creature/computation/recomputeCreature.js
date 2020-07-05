@@ -1,30 +1,61 @@
-import { Meteor } from 'meteor/meteor'
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
+import { RateLimiterMixin } from 'ddp-rate-limiter-mixin';
 import SimpleSchema from 'simpl-schema';
 import { assertEditPermission } from '/imports/api/creature/creaturePermissions.js';
 import ComputationMemo from '/imports/api/creature/computation/ComputationMemo.js';
 import computeMemo from '/imports/api/creature/computation/computeMemo.js';
-import getCalculationProperties from '/imports/api/creature/computation/getCalculationProperties.js';
+import getActiveProperties from '/imports/api/creature/getActiveProperties.js';
 import writeAlteredProperties from '/imports/api/creature/computation/writeAlteredProperties.js';
 import writeCreatureVariables from '/imports/api/creature/computation/writeCreatureVariables.js';
+import { recomputeDamageMultipliersById } from '/imports/api/creature/damageMultiplierDenormalise/recomputeDamageMultipliers.js';
+import Creatures from '/imports/api/creature/Creatures.js';
 
 export const recomputeCreature = new ValidatedMethod({
 
-  name: 'Creatures.methods.recomputeCreature',
+  name: 'creatures.recomputeCreature',
 
   validate: new SimpleSchema({
     charId: { type: String }
   }).validator(),
 
+  mixins: [RateLimiterMixin],
+  rateLimit: {
+    numRequests: 5,
+    timeInterval: 5000,
+  },
+
   run({charId}) {
+    let creature = Creatures.findOne(charId);
     // Permission
-    assertEditPermission(charId, this.userId);
+    assertEditPermission(creature, this.userId);
     // Work, call this direcly if you are already in a method that has checked
     // for permission to edit a given character
     recomputeCreatureById(charId);
   },
 
 });
+
+const calculationPropertyTypes = [
+  'attribute',
+  'skill',
+  'effect',
+  'proficiency',
+  'classLevel',
+  'toggle',
+  'item',
+  // End step types
+  'action',
+  'attack',
+  'savingThrow',
+  'spellList',
+  'spell',
+  'propertySlot',
+];
+
+export function recomputeCreatureById(creatureId){
+  let creature = Creatures.findOne(creatureId);
+  recomputeCreatureByDoc(creature);
+}
 
 /**
  * This function is the heart of DiceCloud. It recomputes a creature's stats,
@@ -62,12 +93,18 @@ export const recomputeCreature = new ValidatedMethod({
  *   - Mark the stat as computed
  * - Write the computed results back to the database
  */
-export function recomputeCreatureById(creatureId){
-  let props = getCalculationProperties(creatureId);
-  let computationMemo = new ComputationMemo(props);
+export function recomputeCreatureByDoc(creature){
+  const creatureId = creature._id;
+  let props = getActiveProperties({
+    ancestorId: creatureId,
+    filter: {type: {$in: calculationPropertyTypes}},
+    includeUntoggled: true,
+    // TODO filter out expensive fields, particularly icon field
+  });
+  let computationMemo = new ComputationMemo(props, creature);
   computeMemo(computationMemo);
   writeAlteredProperties(computationMemo);
   writeCreatureVariables(computationMemo, creatureId);
-  // if(Meteor.isClient) console.log(computationMemo);
+  recomputeDamageMultipliersById(creatureId);
   return computationMemo;
 }

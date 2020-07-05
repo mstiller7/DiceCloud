@@ -2,57 +2,43 @@
   <div class="attribute-form">
     <div class="layout row wrap">
       <text-field
+        ref="focusFirst"
         label="Name"
         :value="model.name"
         :error-messages="errors.name"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['name'], value, ack})"
+        @change="change('name', ...arguments)"
       />
       <text-field
         label="Variable name"
         :value="model.variableName"
         style="flex-basis: 300px;"
-        hint="Use this name in formulae to reference this attribute"
+        hint="This name is used by spells to reference which lists they appear on"
         :error-messages="errors.variableName"
-        :debounce-time="debounceTime"
-        @change="(value, ack) => $emit('change', {path: ['variableName'], value, ack})"
+        @change="change('variableName', ...arguments)"
       />
     </div>
     <text-area
       label="Description"
       :value="model.description"
       :error-messages="errors.description"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['description'], value, ack})"
+      @change="change('description', ...arguments)"
     />
     <text-field
       label="Maximum prepared spells"
       :value="model.maxPrepared"
       hint="How many spells can be prepared"
       :error-messages="errors.maxPrepared"
-      :debounce-time="debounceTime"
-      @change="(value, ack) => $emit('change', {path: ['maxPrepared'], value, ack})"
+      @change="change('maxPrepared', ...arguments)"
     />
   </div>
 </template>
 
 <script>
-	export default {
-		props: {
-			model: {
-				type: Object,
-				default: () => ({}),
-			},
-			errors: {
-				type: Object,
-				default: () => ({}),
-			},
-      debounceTime: {
-        type: Number,
-        default: undefined,
-      },
-		},
-	};
+import propertyFormMixin from '/imports/ui/properties/forms/shared/propertyFormMixin.js';
+
+export default {
+  mixins: [propertyFormMixin],
+};
 </script>
 
 <style lang="css" scoped>
